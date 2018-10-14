@@ -16,6 +16,14 @@ function getMinBalance(account) {
   return STELLAR_BASE_RESERVE * (2 + account.subentry_count);
 }
 
+function isValidFederationAddress(address) {
+  /*
+  Determines whether given address is a valid Stellar federation address.
+  */
+  var re = /^(([^<>()[\]\\.,;:\s\*\"]+(\.[^<>()[\]\\.,;:\s\*\"]+)*)|(\".+\"))\*((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+  return re.test(address);
+}
+
 function isValidMemo(memo) {
   /*
   Determines whether the given memo is valid.

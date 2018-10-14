@@ -54,9 +54,13 @@
       </div>
       <div class="d-flex flex-column">
         <div>
-          <button type="button" class="btn btn-sm btn-outline-dark my-1" data-toggle="modal" data-target="#depositFundsModal">
+          <button type="button" class="btn btn-sm btn-dark my-1" data-toggle="modal" data-target="#depositFundsModal">
             <span data-feather="download"></span>
-            Deposit Funds
+            Deposit
+          </button>
+          <button type="button" class="btn btn-sm btn-light my-1" data-toggle="modal" data-target="#">
+            <span data-feather="upload"></span>
+            Withdraw
           </button>
         </div>
       </div>
@@ -172,6 +176,11 @@
   <div class="card-body p-0 m-0">
     <ul class="nav nav-pills nav-justified">
       <li class="nav-item">
+        <a title="Feed" class="nav-link btn-outline-info rounded-0 rounded-right active" href="{% url 'nc:feed-redirect' %}">
+          <span data-feather="activity"></span>
+        </a>
+      </li>
+      <li class="nav-item">
         <a title="Leaderboard" class="nav-link btn-outline-warning rounded-0 rounded-left" href="{% url 'nc:leaderboard-redirect' %}">
           <span data-feather="award"></span>
         </a>
@@ -179,11 +188,6 @@
       <li class="nav-item">
         <a title="Trade" class="nav-link btn-outline-success rounded-0" href="{% url 'nc:trade-redirect' %}">
           <span data-feather="trending-up"></span>
-        </a>
-      </li>
-      <li class="nav-item">
-        <a title="Feed" class="nav-link btn-outline-info rounded-0 rounded-right active" href="{% url 'nc:feed-redirect' %}">
-          <span data-feather="activity"></span>
         </a>
       </li>
     </ul>
@@ -194,7 +198,7 @@
   <div class="card-header border-0 d-flex flex-wrap justify-content-between align-items-center">
     <div class="mb-1 d-flex flex-column justify-content-between align-items-start">
       <h5>Top Activity From Your Friends</h5>
-      <span class="text-secondary">Gain insight into which tokens are making them the most</span>
+      <span class="text-secondary">Gain insight into what's making them the most</span>
     </div>
     <div class="btn-group" role="group">
       <a href="{% url 'nc:feed-activity' %}" class="btn btn-sm btn-primary">Activity</a>

@@ -379,6 +379,7 @@ class UserFollowUpdateView(LoginRequiredMixin, mixins.PrefetchedSingleObjectMixi
         """
         self.object = self.get_object()
         self.success_url = request.POST.get('success_url', None)
+        self.adapter = get_adapter(request)
 
         if self.object and self.object != self.request.user:
             is_following = self.object.profile.followers\
@@ -406,7 +407,7 @@ class UserFollowUpdateView(LoginRequiredMixin, mixins.PrefetchedSingleObjectMixi
                         'activity_url': activity_url,
                         'email_settings_url': email_settings_url,
                     }
-                    get_adapter(request).send_mail('nc/email/feed_activity_follow_request',
+                    self.adapter.send_mail('nc/email/feed_activity_follow_request',
                         self.object.email, ctx_email)
                 else:
                     # Delete the follow request since request.user has just
@@ -415,14 +416,14 @@ class UserFollowUpdateView(LoginRequiredMixin, mixins.PrefetchedSingleObjectMixi
             else:
                 # Otherwise, simply add to list of followers
                 self.object.profile.followers.add(request.user)
-                feed_manager.follow_user(request.user.id, self.object.id)
+                self.adapter.follow_user(self.object)
 
                 # Add new activity to feed of user following
                 # NOTE: Not using stream-django model mixin because don't want Follow model
                 # instances in the Nucleo db. Adapted from feed_manager.add_activity_to_feed()
                 feed = feed_manager.get_feed(settings.STREAM_USER_FEED, request.user.id)
                 request_user_profile = request.user.profile
-                feed.add_activity({
+                ctx_activity = {
                     'actor': request.user.id,
                     'verb': 'follow',
                     'object': self.object.id,
@@ -432,7 +433,8 @@ class UserFollowUpdateView(LoginRequiredMixin, mixins.PrefetchedSingleObjectMixi
                     'object_username': self.object.username,
                     'object_pic_url': self.object.profile.pic_url(),
                     'object_href': self.object.profile.href(),
-                })
+                }
+                self.adapter.add_activity(ctx_activity)
 
                 # Send an email to user being followed
                 if self.object.profile.allow_follower_email:
@@ -446,7 +448,7 @@ class UserFollowUpdateView(LoginRequiredMixin, mixins.PrefetchedSingleObjectMixi
                         'profile_url': profile_url,
                         'email_settings_url': email_settings_url,
                     }
-                    get_adapter(request).send_mail('nc/email/feed_activity_follow',
+                    self.adapter.send_mail('nc/email/feed_activity_follow',
                         self.object.email, ctx_email)
 
         return HttpResponseRedirect(self.get_success_url())

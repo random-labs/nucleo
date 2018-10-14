@@ -92,6 +92,7 @@ INSTALLED_APPS = [
     'algoliasearch_django',
     'stream_django',
     'timeseries',
+    'django_celery_results',
 ]
 
 MIDDLEWARE = [
@@ -168,7 +169,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # Auth
 LOGIN_URL = '/accounts/login/'
-LOGIN_REDIRECT_URL = '/leaderboard/'
+LOGIN_REDIRECT_URL = '/feed/activity/'
 SIGNUP_REDIRECT_URL = '/accounts/signup/profile/update/'
 AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',
@@ -298,6 +299,16 @@ kms_client = boto3.client(
     aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
 )
 
+# Task queues
+CELERY_RESULT_BACKEND = 'django-db'
+if DEBUG:
+    QUEUE_BACKEND = 'nc.queues.backends.celery.CeleryQueueBackend'
+else:
+    # AWS SQS Settings
+    QUEUE_BACKEND = 'nc.queues.backends.sqsboto3.SQSBoto3QueueBackend'
+    AWS_SQS_BROKER_URL = os.environ.get('AWS_SQS_BROKER_URL')
+    AWS_SQS_REGION_NAME = os.environ.get('AWS_SQS_REGION_NAME')
+
 # Stellar
 STELLAR_ISSUING_KEY_PAIR = keypair.Keypair.from_seed(
     kms_client.decrypt(
@@ -352,6 +363,14 @@ KRAKEN_XLMBTC_PAIR_NAME = 'XXLMXXBT'
 PAPAYA_DOMAIN = 'apay.io'
 PAPAYA_API_URL = 'https://apay.io/api'
 PAPAYA_API_DEPOSIT_URL = PAPAYA_API_URL + '/deposit/'
+
+# Stronghold
+STRONGHOLD_ENV = os.environ.get('STRONGHOLD_ENV')
+STRONGHOLD_SECRET_KEY = kms_client.decrypt(
+    CiphertextBlob=b64decode(os.environ.get('STRONGHOLD_ENCRYPTED_SECRET_KEY'))
+)['Plaintext']
+STRONGHOLD_CREDENTIAL_ID = os.environ.get('STRONGHOLD_CREDENTIAL_ID')
+STRONGHOLD_CREDENTIAL_PASSPHRASE = os.environ.get('STRONGHOLD_CREDENTIAL_PASSPHRASE')
 
 # CryptoPanic
 CRYPTOPANIC_API_KEY = os.environ.get('CRYPTOPANIC_API_KEY')

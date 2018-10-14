@@ -467,9 +467,6 @@ class FeedActivityCreateForm(forms.Form):
             except ObjectDoesNotExist:
                 raise ValidationError(_('Invalid user id. Decoded account associated with Stellar transaction does not match your user id.'), code='invalid_user')
 
-        # Retrieve and store stream feed of current user
-        self.feed = feed_manager.get_feed(settings.STREAM_USER_FEED, self.request_user.id)
-
         return self.cleaned_data
 
     def save(self):
@@ -493,7 +490,7 @@ class FeedActivityCreateForm(forms.Form):
             # TODO: This is a band-aid for times when tx_ops call gives a 404,
             # which seems to happen most often on offers (settlement time?).
             # Get rid of this once implement a transaction_operations nodejs listener?
-            return { 'activity': None, 'success_url': self.success_url }
+            return { 'success_url': self.success_url }
 
         # Determine activity type and update kwargs for stream call
         request_user_profile = self.request_user.profile
@@ -510,6 +507,7 @@ class FeedActivityCreateForm(forms.Form):
             'memo': self.memo,
             'time': self.time,
         }
+        self.adapter = get_adapter(self.request)
 
         # Payment
         if len(self.ops) == 1 and self.ops[0]['type_i'] == Xdr.const.PAYMENT:
@@ -571,7 +569,7 @@ class FeedActivityCreateForm(forms.Form):
                     'profile_url': profile_url,
                     'email_settings_url': email_settings_url,
                 }
-                get_adapter(self.request).send_mail('nc/email/feed_activity_send',
+                self.adapter.send_mail('nc/email/feed_activity_send',
                     object_email, ctx_email)
 
         # Token issuance
@@ -618,7 +616,7 @@ class FeedActivityCreateForm(forms.Form):
                 'account_public_key': issuer.public_key,
                 'email_settings_url': email_settings_url,
             }
-            get_adapter(self.request).send_mail_to_many('nc/email/feed_activity_issue',
+            self.adapter.send_mail_to_many('nc/email/feed_activity_issue',
                 recipient_list, ctx_email)
 
         # Trusting of asset
@@ -644,7 +642,7 @@ class FeedActivityCreateForm(forms.Form):
                 self.account.assets_trusting.remove(asset)
                 if not self.request_user.accounts.filter(assets_trusting=asset).exists():
                     self.request_user.assets_trusting.remove(asset)
-                return { 'activity': None, 'success_url': self.success_url }
+                return { 'success_url': self.success_url }
             else:
                 # Adding trust, so add activity and add to user's asset trusting list.
                 self.account.assets_trusting.add(asset)
@@ -680,7 +678,7 @@ class FeedActivityCreateForm(forms.Form):
                         'profile_url': profile_url,
                         'email_settings_url': email_settings_url,
                     }
-                    get_adapter(self.request).send_mail('nc/email/feed_activity_trust',
+                    self.adapter.send_mail('nc/email/feed_activity_trust',
                         asset_issuer_user.email, ctx_email)
 
         # Buy/sell of asset
@@ -733,7 +731,7 @@ class FeedActivityCreateForm(forms.Form):
                 'asset_url': asset_url,
                 'email_settings_url': email_settings_url,
             }
-            get_adapter(self.request).send_mail_to_many('nc/email/feed_activity_offer',
+            self.adapter.send_mail_to_many('nc/email/feed_activity_offer',
                 recipient_list, ctx_email)
 
             # Set the redirect URL to the asset detail page
@@ -742,9 +740,13 @@ class FeedActivityCreateForm(forms.Form):
 
         else:
             # Not a supported activity type
-            return { 'activity': None, 'success_url': self.success_url }
+            return { 'success_url': self.success_url }
 
+
+        # Add activity to user's feed
+        self.adapter.add_activity(kwargs)
+
+        # Return object with success url
         return {
-            'activity': self.feed.add_activity(kwargs),
             'success_url': self.success_url,
         }

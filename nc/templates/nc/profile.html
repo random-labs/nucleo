@@ -15,7 +15,15 @@
 {% block main %}
 <div class="card mb-4 box-shadow">
   <img class="card-img-top img-object-fit-cover border-bottom" style="height: 200px; width: 100%; display: block;"{% if object.profile and object.profile.cover %} src="{{ object.profile.cover.url }}"{% endif %} alt="">
-  <img class="card-img-top img-thumbnail img-object-fit-cover ml-3" style="height: 100px; width: 100px; margin-top: -50px;"{% if object.profile and object.profile.pic %} src="{{ object.profile.pic.url }}"{% else %} src="{% static 'nc/images/profile.png' %}"{% endif %} alt="">
+  <div class="d-flex justify-content-between align-items-end">
+    <img class="card-img-top img-thumbnail img-object-fit-cover ml-3" style="height: 100px; width: 100px; margin-top: -50px;"{% if object.profile and object.profile.pic %} src="{{ object.profile.pic.url }}"{% else %} src="{% static 'nc/images/profile.png' %}"{% endif %} alt="">
+    {% if object.id == request.user.id %}
+    <a href="{% url 'nc:user-update' user.username %}" class="btn btn-sm btn-outline-secondary mx-3">
+      <span data-feather="edit"></span>
+      Edit
+    </a>
+    {% endif %}
+  </div>
     <div class="card-body">
       <h2>{{ object.get_full_name }}</h2>
       <h5 class="text-secondary">@{{ object.username }}</h5>
@@ -35,15 +43,15 @@
           <div class="">
             {% if object.id == request.user.id %}
             {% if num_addresses > 0 %}
-            <button type="button" class="btn btn-sm btn-outline-dark" data-toggle="modal" data-target="#depositFundsModal">
+            <button type="button" class="btn btn-sm btn-dark" data-toggle="modal" data-target="#depositFundsModal">
               <span data-feather="download"></span>
-              Deposit Funds
+              Deposit
+            </button>
+            <button type="button" class="btn btn-sm btn-light" data-toggle="modal" data-target="#">
+              <span data-feather="upload"></span>
+              Withdraw
             </button>
             {% endif %}
-            <a href="{% url 'nc:user-update' user.username %}" class="btn btn-sm btn-outline-secondary">
-              <span data-feather="edit"></span>
-              Edit Profile
-            </a>
             {% else %}
             <form method="POST" action="{% url 'nc:user-follow' object.username %}">
             {% csrf_token %}

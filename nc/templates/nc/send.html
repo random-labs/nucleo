@@ -107,7 +107,7 @@
                 <span data-feather="copy"></span>
               </button>
               <button value="{{ acc.public_key }}" title="Stellar Account Public Key" class="btn btn-sm btn-light font-weight-bold">
-                {{ acc.public_key }}
+                {{ acc.public_key|truncatechars:10 }}{{ acc.public_key|slice:"-7:" }}
               </button>
             </div>
           </div>

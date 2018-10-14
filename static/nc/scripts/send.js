@@ -61,6 +61,19 @@
       // Show the search results in dropdown
       sendToDropdown.classList.remove('d-none');
     }
+
+    /* TODO:
+    if (isValidFederationAddress(this.value)) {
+      // Fetch the federation record associated with address
+      // and replace memo with federation specified memo.
+      StellarSdk.FederationServer.resolve(this.value)
+      .then(function(federationRecord) {
+        console.log(federationRecord);
+
+        // TODO: parse federationRecord.memo_type and federationRecord.memo
+      })
+    }
+    */
   });
 
   // Set event listeners for when x button on sendTo input is clicked
@@ -262,7 +275,7 @@
     catch (err) {
       // Check search hits list instead
       let hits = sendToAccountHits.getElementsByClassName('dropdown-item');
-      if (hits.length == 0 || hits.length > 1) {
+      if (hits.length != 1) {
         // Display errors
         displayError(sendFromHeader, 'Invalid number of recipients. Please choose one account to receive payment.', true);
         return false;

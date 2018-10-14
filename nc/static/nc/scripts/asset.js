@@ -1058,10 +1058,16 @@
     // Set event listeners for clicking of available balance amount
     $('#buyAmountInputAvailable').on('click', function(event) {
       $('#buyAmount')[0].value = $('#buyAmount')[0].max;
+
+      // Recalculate amounts
+      setBuyDisplayAmounts();
     });
 
     $('#sellAmountInputAvailable').on('click', function(event) {
       $('#sellAmount')[0].value = $('#sellAmount')[0].max;
+
+      // Recalculate amounts
+      setSellDisplayAmounts();
     });
 
     // Set event listeners for clicking on market and limit buttons

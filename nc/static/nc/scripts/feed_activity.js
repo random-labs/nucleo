@@ -91,7 +91,7 @@
 
     // Build the full DOM li list item object
     var li = document.createElement("li");
-    li.setAttribute("class", "list-group-item d-flex justify-content-between flex-wrap p-4");
+    li.setAttribute("class", "list-group-item d-flex justify-content-between p-4");
 
     var contentDiv = document.createElement("div");
     contentDiv.setAttribute("class", "d-flex align-content-start");

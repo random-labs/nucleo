@@ -71,7 +71,8 @@ class Profile(models.Model):
     )
     followers = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
-        related_name='profiles_following'
+        related_name='profiles_following',
+        blank=True
     )
     # NOTE: If private profile, must approve follower request for other user to
     # see assets, accounts, etc.
@@ -304,16 +305,19 @@ class Asset(models.Model):
     domain = models.CharField(max_length=255, null=True, blank=True, default=None)
     code = models.CharField(max_length=12)
     asset_id = models.CharField(max_length=70, null=True, blank=True, default=None)
+    num_accounts = models.PositiveIntegerField(default=0) # NOTE: storing Stellar network num accounts trusting for easy ref here
 
     trusters = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
-        related_name='assets_trusting'
+        related_name='assets_trusting',
+        blank=True
     )
 
     # NOTE: Have both user and account trusters to differentiate after add/remove trust with button active state.
     account_trusters = models.ManyToManyField(
         Account,
-        related_name='assets_trusting'
+        related_name='assets_trusting',
+        blank=True
     )
 
     # NOTE: Since these meta fields are defined in the TOML (which Nucleo can't change
