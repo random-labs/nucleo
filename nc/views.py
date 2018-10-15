@@ -1693,7 +1693,7 @@ class WorkView(generic.View):
     url endpoint.
     """
     def post(self, request, *args, **kwargs):
-        if settings.ENV_NAME != 'work':
+        if settings.ENV_NAME == 'work':
             # If worker environment, then can consume
             message = request.body
             get_queue_backend().process(message)
