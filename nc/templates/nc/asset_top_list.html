@@ -239,11 +239,6 @@
   <div class="card-body p-0 m-0">
     <ul class="nav nav-pills nav-justified">
       <li class="nav-item">
-        <a title="Feed" class="nav-link btn-outline-info rounded-0 rounded-right" href="{% url 'nc:feed-redirect' %}">
-          <span data-feather="activity"></span>
-        </a>
-      </li>
-      <li class="nav-item">
         <a title="Leaderboard" class="nav-link btn-outline-warning rounded-0 rounded-left" href="{% url 'nc:leaderboard-redirect' %}">
           <span data-feather="award"></span>
         </a>
@@ -251,6 +246,11 @@
       <li class="nav-item">
         <a title="Trade" class="nav-link btn-outline-success rounded-0 active" href="{% url 'nc:trade-redirect' %}">
           <span data-feather="trending-up"></span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a title="Feed" class="nav-link btn-outline-info rounded-0 rounded-right" href="{% url 'nc:feed-redirect' %}">
+          <span data-feather="activity"></span>
         </a>
       </li>
     </ul>

@@ -169,7 +169,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # Auth
 LOGIN_URL = '/accounts/login/'
-LOGIN_REDIRECT_URL = '/feed/activity/'
+LOGIN_REDIRECT_URL = '/leaderboard/'
 SIGNUP_REDIRECT_URL = '/accounts/signup/profile/update/'
 AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',
