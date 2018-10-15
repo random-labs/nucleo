@@ -10,5 +10,5 @@ class CeleryQueueBackend(BaseQueueBackend):
         """
         return task.delay(*args, **kwargs)
 
-    def process(message):
+    def process(self, message):
         pass

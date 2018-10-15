@@ -47,6 +47,7 @@ from .models import (
     Account, AccountFundRequest, Asset, FollowRequest, Portfolio,
     portfolio_data_collector, Profile, RawPortfolioData,
 )
+from .queues import get_queue_backend
 
 
 # Web app views
@@ -1684,6 +1685,22 @@ class ActivityCreateView(mixins.AjaxableResponseMixin, generic.View):
 
 
 # Worker environment views
+## Work for task consumers (AWS SQS)
+@method_decorator(csrf_exempt, name='dispatch')
+class WorkView(generic.View):
+    """
+    AWS EB worker tier consumes tasks upon POST of JSON data to this
+    url endpoint.
+    """
+    def post(self, request, *args, **kwargs):
+        if settings.ENV_NAME != 'work':
+            # If worker environment, then can consume
+            message = request.body
+            get_queue_backend().process(message)
+            return HttpResponse()
+        else:
+            return HttpResponseNotFound()
+
 ## Cron job tasks (AWS worker tier)
 @method_decorator(csrf_exempt, name='dispatch')
 class PerformanceCreateView(generic.View):
