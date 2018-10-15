@@ -92,13 +92,13 @@
         <span class="sr-only">Toggle Dropdown</span>
       </button>
       <div class="dropdown-menu dropdown-menu-right" style="right: 0; left: auto; margin-right: 17px;">
-        <a class="dropdown-item" href="{% url 'nc:trade-redirect' %}">
-          <span data-feather="trending-up"></span>
-          Trade
-        </a>
         <a class="dropdown-item" href="{% url 'nc:leaderboard-redirect' %}">
           <span data-feather="award"></span>
           Leaderboard
+        </a>
+        <a class="dropdown-item" href="{% url 'nc:trade-redirect' %}">
+          <span data-feather="trending-up"></span>
+          Trade
         </a>
         <div class="dropdown-divider"></div>
         <a class="dropdown-item" href="{{ login_redirect }}">Log in</a>
