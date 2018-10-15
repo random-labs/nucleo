@@ -364,13 +364,13 @@ PAPAYA_DOMAIN = 'apay.io'
 PAPAYA_API_URL = 'https://apay.io/api'
 PAPAYA_API_DEPOSIT_URL = PAPAYA_API_URL + '/deposit/'
 
-# Stronghold
-STRONGHOLD_ENV = os.environ.get('STRONGHOLD_ENV')
-STRONGHOLD_SECRET_KEY = kms_client.decrypt(
-    CiphertextBlob=b64decode(os.environ.get('STRONGHOLD_ENCRYPTED_SECRET_KEY'))
-)['Plaintext']
-STRONGHOLD_CREDENTIAL_ID = os.environ.get('STRONGHOLD_CREDENTIAL_ID')
-STRONGHOLD_CREDENTIAL_PASSPHRASE = os.environ.get('STRONGHOLD_CREDENTIAL_PASSPHRASE')
+# TODO: Stronghold
+# STRONGHOLD_ENV = os.environ.get('STRONGHOLD_ENV')
+# STRONGHOLD_SECRET_KEY = kms_client.decrypt(
+#    CiphertextBlob=b64decode(os.environ.get('STRONGHOLD_ENCRYPTED_SECRET_KEY'))
+#)['Plaintext']
+#STRONGHOLD_CREDENTIAL_ID = os.environ.get('STRONGHOLD_CREDENTIAL_ID')
+#STRONGHOLD_CREDENTIAL_PASSPHRASE = os.environ.get('STRONGHOLD_CREDENTIAL_PASSPHRASE')
 
 # CryptoPanic
 CRYPTOPANIC_API_KEY = os.environ.get('CRYPTOPANIC_API_KEY')
