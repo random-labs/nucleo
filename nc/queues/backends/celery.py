@@ -1,4 +1,6 @@
+from nc import tasks as nc_tasks
 from nc.queues.backends.base import BaseQueueBackend
+
 
 class CeleryQueueBackend(BaseQueueBackend):
     """

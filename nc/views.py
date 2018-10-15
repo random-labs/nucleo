@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-import datetime, dateutil.parser, parse, requests, stream, sys
+import datetime, dateutil.parser, json, parse, requests, stream, sys
 
 from allauth.account.adapter import get_adapter
 from allauth.account import views as allauth_account_views
@@ -1693,10 +1693,9 @@ class WorkView(generic.View):
     url endpoint.
     """
     def post(self, request, *args, **kwargs):
-        if settings.ENV_NAME == 'work':
+        if settings.ENV_NAME != 'work':
             # If worker environment, then can consume
-            message = request.body
-            print get_queue_backend()
+            message = json.loads(request.body)
             get_queue_backend().process(message)
             return HttpResponse()
         else:

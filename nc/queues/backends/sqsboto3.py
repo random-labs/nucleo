@@ -53,9 +53,7 @@ class SQSBoto3QueueBackend(BaseQueueBackend):
         """
         Process message in worker tier.
         """
-        print message
         task = getattr(nc_tasks, message.get('task'), None)
-        print task
         if task:
             args = message.get('args', [])
             kwargs = message.get('kwargs', {})
