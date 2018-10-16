@@ -1072,6 +1072,12 @@ class AssetDetailView(mixins.PrefetchedSingleObjectMixin, mixins.IndexContextMix
         """
         model_asset = self.object
 
+        # Update the number of accounts trusting for the ticker API
+        num_accounts = record['num_accounts'] if 'num_accounts' in record else None
+        if num_accounts:
+            model_asset.num_accounts = num_accounts
+            model_assets.save()
+
         # Use toml attribute of record to update instance from toml file (to fetch)
         toml_url = record['_links']['toml']['href']\
             if record and '_links' in record and 'toml' in record['_links']\
@@ -1908,7 +1914,7 @@ class AssetTomlUpdateView(generic.View):
             # Keep track of the time cron job takes for performance reasons
             cron_start = timezone.now()
 
-            # For all asets in db, refresh attributes from toml
+            # For all assets in db, refresh attributes from toml
             self._update_assets_from_tomls()
 
             # Print out length of time cron took
@@ -1916,6 +1922,105 @@ class AssetTomlUpdateView(generic.View):
             print 'Asset toml update cron job took {0} seconds for {1} assets'.format(
                 cron_duration.total_seconds(),
                 Asset.objects.count()
+            )
+
+            return HttpResponse()
+        else:
+            return HttpResponseNotFound()
+
+@method_decorator(csrf_exempt, name='dispatch')
+class AssetIngestUpdateView(generic.View):
+    """
+    Ingest and update assets from Horizon assets list API endpoint. Only add
+    new assets if number of trusted accounts exceeds threshold.
+
+    AWS EB worker tier cron job POSTs to url endpoint associated with
+    this view.
+    """
+    def _ingest_assets_from_horizon(self):
+        """
+        Query Horizon assets list API endpoint
+        """
+        assets_to_build = {} # NOTE: { asset_id: record }
+        asset_ids = []
+        issuer_addresses = []
+
+        # Get all the relevant asset records from Horizon
+        horizon = settings.STELLAR_HORIZON_INITIALIZATION_METHOD()
+        cursor = None
+        finished = False
+        while not finished:
+            # Setup the params for querying with cursor from previous loop
+            params = {
+                'limit': 200
+            }
+            if cursor:
+                params['cursor'] = cursor
+
+            # Query horizon
+            json = horizon.assets(params=params)
+
+            if '_embedded' not in json or 'records' not in json['_embedded'] or len(json['_embedded']['records']) == 0:
+                finished = True
+            else:
+                # Store the cursor for next query
+                if '_links' in json and 'next' in json['_links'] and 'href' in json['_links']['next']:
+                    cursor = QueryDict(urlparse(json['_links']['next']['href']).query).get('cursor', None)
+                if not cursor:
+                    finished = True
+
+                # Filter through returned records in query and store only assets
+                # with trustlines greater than ingestion trust minimum
+                for record in json['_embedded']['records']:
+                    num_accounts = record.get('num_accounts', 0)
+                    asset_code = record.get('asset_code')
+                    asset_issuer = record.get('asset_issuer')
+                    if num_accounts > settings.STELLAR_ASSET_INGEST_TRUST_MINIMUM and record['asset_type'] != 'native' and asset_code and asset_issuer:
+                        asset_id = '{0}-{1}'.format(asset_code, asset_issuer)
+                        assets_to_build[asset_id] = record
+                        asset_ids.append(asset_id)
+                        issuer_addresses.append(asset_issuer)
+
+        # Build issuer addresses dict
+        issuers_map = {
+            acc.public_key: acc
+            for acc in Account.objects.filter(public_key__in=issuer_addresses)
+        }
+
+        # Build assets to update and assets to create dicts
+        assets_to_update = {
+            a.asset_id: a
+            for a in Asset.objects.filter(asset_id__in=asset_ids)
+        }
+        assets_to_create = [
+            Asset(code=record['asset_code'], issuer=issuers_map.get(record['asset_issuer'], None), issuer_address=record['asset_issuer'], num_accounts=record['num_accounts'])
+            for asset_id, record in assets_to_build.iteritems()
+            if asset_id not in assets_to_update
+        ]
+        created = Asset.objects.bulk_create(assets_to_create)
+
+        # Sort through assets to update to change num records
+        for asset_id, a in assets_to_update.iteritems():
+            num_accounts = assets_to_build[a.asset_id]['num_accounts']
+            if a.num_accounts != num_accounts:
+                a.num_accounts = num_accounts
+                a.save()
+
+        print 'Ingested {0} new and updated {1} existing assets from Horizon'.format(len(created), len(assets_to_update))
+
+    def post(self, request, *args, **kwargs):
+        # If worker environment, then can process cron job
+        if settings.ENV_NAME == 'work':
+            # Keep track of the time cron job takes for performance reasons
+            cron_start = timezone.now()
+
+            # Sort through all assets on the Stellar network
+            self._ingest_assets_from_horizon()
+
+            # Print out length of time cron took
+            cron_duration = timezone.now() - cron_start
+            print 'Asset ingest update cron job took {0} seconds'.format(
+                cron_duration.total_seconds()
             )
 
             return HttpResponse()

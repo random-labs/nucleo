@@ -59,7 +59,7 @@ urlpatterns = [
     # Performance
     url(r'^performance/create/$', views.PerformanceCreateView.as_view(), name='performance-create'),
     url(r'^toml/update/$', views.AssetTomlUpdateView.as_view(), name='toml-update'),
-
+    url(r'^ingest/update/$', views.AssetIngestUpdateView.as_view(), name='ingest-update'),
 
     ## Worker tier
     url(r'^work/$', views.WorkView.as_view(), name='consume-work'),

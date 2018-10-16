@@ -327,6 +327,7 @@ STELLAR_TOML_PATH = '/.well-known/stellar.toml'
 # NOTE: https://www.stellar.org/developers/guides/concepts/fees.html
 STELLAR_CREATE_ACCOUNT_QUOTA = 2
 STELLAR_CREATE_ACCOUNT_MINIMUM_BALANCE = '3'
+STELLAR_ASSET_INGEST_TRUST_MINIMUM = 500
 if DEBUG:
     STELLAR_HORIZON = horizon.HORIZON_TEST
     STELLAR_HORIZON_INITIALIZATION_METHOD = horizon.horizon_testnet

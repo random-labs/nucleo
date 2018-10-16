@@ -6,3 +6,6 @@ cron:
  - name: "toml-job"
    url: "/toml/update/"
    schedule: "*/15 * * * *"
+ - name: "ingest-job"
+   url: "/ingest/update/"
+   schedule: "0 */2 * * *"
