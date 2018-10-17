@@ -29,10 +29,12 @@ class Command(BaseCommand):
             if port:
                 created_portfolio += 1
 
-        created_self_feed_follows = 0
-        for u in get_user_model().objects.all():
-            feed_manager.follow_user(u.id, u.id)
-            created_self_feed_follows += 1
+        # NOTE: only include this if necessary, otherwise
+        # stream.exceptions.RateLimitReached likely to be thrown
+        # created_self_feed_follows = 0
+        # for u in get_user_model().objects.all():
+        #     feed_manager.follow_user(u.id, u.id)
+        #     created_self_feed_follows += 1
 
         print 'Created {0} profiles, {1} portfolios, and {2} self-feed follows'.format(
             created_profile, created_portfolio, created_self_feed_follows
