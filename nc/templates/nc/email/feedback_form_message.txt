@@ -1,10 +1,15 @@
 {% load i18n %}{% blocktrans with site_name=current_site.name site_domain=current_site.domain %}
 Hello @{{ username }}!
 
-We'd like your feedback on how best to improve Nucleo and make it something you love even more. We'd love to hear your thoughts on what's working so far and what's not.
+We'd love to get your feedback on how you think we should improve Nucleo.
 
-To let us know what you think about Nucleo, please fill out this short typeform: https://nucleofi.typeform.com/to/w1dWPI
+We want to build something every Stellar enthusiast absolutely loves. Filling out this short typeform will
+go a long way towards reaching that goal.
 
-Thanks for being one of the early pioneers on this journey with us. Looking forward to hearing what you think!
+https://nucleofi.typeform.com/to/w1dWPI
+
+Thanks for being one of the early pioneers on this journey with us!
+
+The Nucleo.fi Team
 {{ site_domain }}
 {% endblocktrans %}
