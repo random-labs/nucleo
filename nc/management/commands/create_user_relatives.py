@@ -36,6 +36,6 @@ class Command(BaseCommand):
         #     feed_manager.follow_user(u.id, u.id)
         #     created_self_feed_follows += 1
 
-        print 'Created {0} profiles, {1} portfolios, and {2} self-feed follows'.format(
-            created_profile, created_portfolio, created_self_feed_follows
+        print 'Created {0} profiles and {1} portfolios'.format(
+            created_profile, created_portfolio
         )
