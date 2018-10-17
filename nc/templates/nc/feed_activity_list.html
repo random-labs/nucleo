@@ -139,6 +139,20 @@
   </form>
 </div>
 
+<!-- TODO:
+<div class="mb-4">
+  <form method="POST" action="">
+    {% csrf_token %}
+    <div class="input-group">
+      <input class="form-control form-control-lg" type="text" placeholder="What crypto's on your mind?">
+      <div class="input-group-append">
+        <button type="submit" class="btn btn-sm btn-primary"><span data-feather="edit-2"></span></button>
+      </div>
+    </div>
+  </form>
+</div>
+-->
+
 {% if request.user.follower_requests.count > 0 %}
 <div class="card card-requests mb-4">
   <div class="card-header border-0">

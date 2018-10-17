@@ -1,0 +1,10 @@
+{% load i18n %}{% blocktrans with site_name=current_site.name site_domain=current_site.domain %}
+Hi @{{ username }},
+
+We'd like your feedback on how best to improve Nucleo and make it something you love even more. We'd love to hear your thoughts on what's working so far and what's not.
+
+To let us know what you think about Nucleo, please fill out this short typeform: https://nucleofi.typeform.com/to/w1dWPI
+
+Thanks for being one of the early pioneers on this journey with us. Looking forward to hearing what you think!
+{{ site_domain }}
+{% endblocktrans %}

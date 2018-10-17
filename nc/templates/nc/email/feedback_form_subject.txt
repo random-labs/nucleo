@@ -1,0 +1,4 @@
+{% load i18n %}
+{% autoescape off %}
+{% blocktrans %}Help Make Nucleo Even Better{% endblocktrans %}
+{% endautoescape %}

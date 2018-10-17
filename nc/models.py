@@ -140,6 +140,107 @@ class FollowRequest(models.Model):
 
 
 @python_2_unicode_compatible
+class Activity(models.Model):
+    """
+    Activity for items in user's activity feed.
+    """
+    user = models.ForeignKey(settings.AUTH_USER_MODEL,
+        related_name='activities', on_delete=models.CASCADE)
+    activity_id = models.CharField(max_length=36) # NOTE: this is what we get back from stream
+    tx_hash = models.CharField(max_length=64, null=True, blank=True, default=None)# NOTE: this is what we get back from Horizon if activity is a tx type
+    created = models.DateTimeField(auto_now_add=True)
+
+    liked_by = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        related_name='activities_liked',
+        blank=True
+    )
+    awarded_by = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        through='Award',
+        related_name='activities_awarded',
+        blank=True
+    )
+
+    POST = 0
+    SEND = 1
+    ISSUE = 2
+    TRUST = 3
+    OFFER = 4
+    FOLLOW = 5
+    COMMENT = 6
+    VERB_CHOICES = (
+        (POST, 'post'),
+        (SEND, 'send'),
+        (ISSUE, 'issue'),
+        (TRUST, 'trust'),
+        (OFFER, 'offer'),
+        (FOLLOW, 'follow'),
+        (COMMENT, 'comment'),
+    )
+    verb = models.IntegerField(choices=VERB_CHOICES, default=POST)
+
+    # Activity manager
+    objects = managers.ActivityManager()
+
+    def __str__(self):
+        activity_id = self.activity_id if self.activity_id else self.id
+        return 'Activity {0} {1}'.format(self.get_verb_display(), activity_id)
+
+
+@python_2_unicode_compatible
+class Comment(models.Model):
+    """
+    Comment on an activity in a user's activity feed.
+    """
+    parent = models.ForeignKey(Activity, related_name='comments', on_delete=models.CASCADE)
+    activity_id = models.CharField(max_length=36) # NOTE: this is what we get back from stream for this comment
+    created = models.DateTimeField(auto_now_add=True)
+
+    liked_by = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        related_name='comments_liked',
+        blank=True
+    )
+    awarded_by = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        through='Award',
+        related_name='comments_awarded',
+        blank=True
+    )
+
+    # Comment manager
+    objects = managers.CommentManager()
+
+    def __str__(self):
+        comment_id = self.activity_id if self.activity_id else self.id
+        parent = self.parent
+        parent_id = parent.activity_id if parent.activity_id else parent.id
+        return 'Comment {0} on activity {1}'.format(comment_id, parent_id)
+
+
+@python_2_unicode_compatible
+class Award(models.Model):
+    """
+    Award for an activity or a comment on an activity.
+    """
+    activity = models.ForeignKey(Activity, related_name='awards', on_delete=models.CASCADE, null=True, blank=True, default=None)
+    comment = models.ForeignKey(Comment, related_name='awards', on_delete=models.CASCADE, null=True, blank=True, default=None)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL,
+        related_name='awards_given_out', on_delete=models.CASCADE)
+    tx_hash = models.CharField(max_length=64) # NOTE: this is what we get back from Horizon
+    xlm_value = models.FloatField(default=0.0)
+
+    def __str__(self):
+        item_id = ''
+        if self.activity:
+            item_id = str(self.activity)
+        elif self.comment:
+            item_id = str(self.comment)
+        return 'Award of {0} XLM from {1} for {2}'.format(self.xlm_value, self.user, item_id)
+
+
+@python_2_unicode_compatible
 class Account(models.Model):
     """
     Store of Stellar public key addresses associated with user.

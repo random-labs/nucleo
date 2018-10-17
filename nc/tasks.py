@@ -8,6 +8,8 @@ from celery import shared_task
 
 from stream_django.feed_manager import feed_manager
 
+from .models import Activity, Comment
+
 
 @shared_task
 def send_mail(datatuple):
@@ -22,7 +24,12 @@ def add_activity_to_feed(feed_type, feed_id, context):
     Task to add activity to feed.
     """
     feed = feed_manager.get_feed(feed_type, feed_id)
-    feed.add_activity(context)
+    resp = feed.add_activity(context)
+    inv_verb_choices = { v: k for k, v in dict(Activity.VERB_CHOICES).iteritems() }
+    verb = inv_verb_choices.get(resp.get('verb', ''))
+    if verb:
+        model_cls = Activity if verb != Activity.COMMENT else Comment
+        model_cls.objects.create_from_stream_response(resp)
 
 @shared_task
 def follow_user_feed(follower_id, user_id):

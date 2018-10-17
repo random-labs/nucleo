@@ -2,6 +2,21 @@ from algoliasearch_django import update_records
 from django.db import models
 
 
+class ActivityManager(models.Manager):
+    def create_from_stream_response(self, resp):
+        """
+        Create an activity instance from the response of
+        stream_feed.add_activity().
+        """
+        inv_verb_choices = { v: k for k, v in dict(self.model.VERB_CHOICES).iteritems() }
+        verb = inv_verb_choices.get(resp.get('verb'))
+        user_id = int(resp.get('actor'))
+        activity_id = resp.get('id')
+        tx_hash = resp.get('tx_hash')
+        return self.create(verb=verb, user_id=user_id,
+            activity_id=activity_id, tx_hash=tx_hash)
+
+
 class AssetManager(models.Manager):
     def bulk_create(self, objs, batch_size=None):
         """
@@ -20,3 +35,14 @@ class AssetManager(models.Manager):
 
         # Return created assets
         return created
+
+
+class CommentManager(models.Manager):
+    def create_from_stream_response(self, resp):
+        """
+        Create a comment instance from the response of
+        stream_feed.add_activity().
+        """
+        parent_id = int(resp.get('object')) # NOTE: object is the id of parent activity user commented on
+        activity_id = resp.get('id')
+        return self.create(parent_id=parent_id, activity_id=activity_id)

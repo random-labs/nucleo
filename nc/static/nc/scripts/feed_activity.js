@@ -73,17 +73,22 @@
   function parseActivity(record) {
     // Returns DOM element for insertion into activityList before MORE button
     // EXAMPLE:
-    // <li class="list-group-item d-flex justify-content-between flex-wrap p-4">
+    // <li class="list-group-item d-flex justify-content-between p-4">
     //   <div class="d-flex align-content-start">
     //     <div class="position-relative">
     //       <a href=""><img class="img-object-fit-cover rounded" style="height: 60px; width: 60px;" src="{{ profile.pic.url }}" alt=""></a>
     //       <a href=""><img class="img-object-fit-cover img-thumbnail rounded-circle position-absolute" style="height: 40px; width: 40px; top: -15px; left: -15px;" src="{% static 'nc/images/rocket.png' %}" alt=""></a>
     //     </div>
-    //     <div class="flex-column align-items-start mx-3">
+    //     <div class="d-flex flex-column align-items-start mx-3">
     //       <span><a href="" class="text-dark font-weight-bold">@mikey.rf</a> sent 0.75 <a href="" class="text-dark font-weight-bold">XLM</a> to <a href="" class="text-dark font-weight-bold">@feld27</a></span>
     //       <h4>Memo!</h4>
     //       <div><small class="text-muted">15 days ago</small></div>
     //       <div><small>Tx #: <a href="https://horizon-testnet.stellar.org/transactions/bfaf2287695c651747e635ca7e03698ba44611ed9a6b919bd1db9727a0b6dfda" class="text-info" title="Stellar Transaction Hash" target="_blank">bfaf221...0b6dfda</a></small></div>
+    //       <div class="d-flex flex-row">
+    //        <span data-feather="heart"></span>
+    //        <span data-feather="message-circle"></span>
+    //        <span data-feather="award"></span>
+    //       </div>
     //     </div>
     //   </div>
     //   <span data-feather="send"></span>
@@ -147,7 +152,7 @@
     // Description container for all the relevant
     // activity details
     var descriptionContentDiv = document.createElement("div");
-    descriptionContentDiv.setAttribute("class", "flex-column align-items-start mx-3");
+    descriptionContentDiv.setAttribute("class", "d-flex flex-column align-items-start mx-3");
 
     var descriptionSpan = document.createElement("span"),
         memoDiv = document.createElement("div"),
@@ -156,7 +161,23 @@
         timeSinceDiv = document.createElement("div"),
         timeSinceSmall = document.createElement("small"),
         timeSince = moment(record.time + "Z").fromNow(), // NOTE: Stellar horizon created_at attribute stored in stream record.time implicitly assumes UTC so add Z here
-        timeSinceText = document.createTextNode(timeSince);
+        timeSinceText = document.createTextNode(timeSince),
+        actionsDiv = document.createElement("div"),
+        actionLikeContainer = document.createElement("div"),
+        actionAwardContainer = document.createElement("div"),
+        actionCommentContainer = document.createElement("div"),
+        actionLikeButton = document.createElement("button"),
+        actionAwardButton = document.createElement("button"),
+        actionCommentButton = document.createElement("button"),
+        actionLikeIconSpan = document.createElement("span"),
+        actionAwardIconSpan = document.createElement("span"),
+        actionCommentIconSpan = document.createElement("span"),
+        actionLikeSmall = document.createElement("small"),
+        actionAwardSmall = document.createElement("small"),
+        actionCommentSmall = document.createElement("small"),
+        actionLikeText = document.createTextNode(""), // TODO: Add in counts for like, comment, award
+        actionAwardText = document.createTextNode(""),
+        actionCommentText = document.createTextNode("");
 
     // Description span in description container
     descriptionSpan.setAttribute("style", "font-size: 0.9em")
@@ -199,6 +220,41 @@
       txHashA.appendChild(txHashAText);
       descriptionContentDiv.append(txHashDiv);
     }
+
+    // Like, comment and award buttons in description container
+    actionsDiv.setAttribute("class", "d-flex flex-row justify-content-start mt-2");
+
+    actionLikeIconSpan.setAttribute("data-feather", "heart");
+    actionLikeContainer.setAttribute("class", "pr-4");
+    actionLikeButton.setAttribute("class", "btn btn-link text-dark p-0"); // TODO: format either text-dark or text-danger, text-warning, text-info depending on whether user has liked, awarded, or commented
+    actionLikeSmall.setAttribute("class", "pl-1");
+    actionLikeButton.append(actionLikeIconSpan);
+    actionLikeSmall.append(actionLikeText);
+    actionLikeButton.append(actionLikeSmall);
+    actionLikeContainer.append(actionLikeButton);
+
+    actionAwardIconSpan.setAttribute("data-feather", "award");
+    actionAwardContainer.setAttribute("class", "pr-4");
+    actionAwardButton.setAttribute("class", "btn btn-link text-dark p-0");
+    actionAwardSmall.setAttribute("class", "pl-1");
+    actionAwardButton.append(actionAwardIconSpan);
+    actionAwardSmall.append(actionAwardText);
+    actionAwardButton.append(actionAwardSmall);
+    actionAwardContainer.append(actionAwardButton);
+
+    actionCommentIconSpan.setAttribute("data-feather", "message-circle");
+    actionCommentContainer.setAttribute("class", "pr-4");
+    actionCommentButton.setAttribute("class", "btn btn-link text-dark p-0");
+    actionCommentSmall.setAttribute("class", "pl-1");
+    actionCommentButton.append(actionCommentIconSpan);
+    actionCommentSmall.append(actionCommentText);
+    actionCommentButton.append(actionCommentSmall);
+    actionCommentContainer.append(actionCommentButton);
+
+    actionsDiv.appendChild(actionLikeContainer);
+    actionsDiv.appendChild(actionAwardContainer);
+    actionsDiv.appendChild(actionCommentContainer);
+    // TODO: descriptionContentDiv.append(actionsDiv);
 
     // Feather icon container for activity icon type
     var featherIconSpan = document.createElement("span");

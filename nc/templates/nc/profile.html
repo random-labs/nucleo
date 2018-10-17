@@ -366,7 +366,6 @@
   </div>
 </div>
 
-
 {% if object.id == request.user.id and num_addresses > 0 %}
 <!-- Issue Stellar Token Modal -->
 <div class="modal fade" id="issueStellarToken" tabindex="-1" role="dialog" aria-labelledby="issueStellarModalTitle" aria-hidden="true">
@@ -516,6 +515,22 @@
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-0 my-3 border-bottom">
   <h1 id="activity" class="h2">Activity</h1>
 </div>
+
+<!-- TODO:
+{% if object.id == request.user.id %}
+<div class="mb-1">
+  <form method="POST" action="">
+    {% csrf_token %}
+    <div class="input-group">
+      <input class="form-control form-control-lg" type="text" placeholder="What crypto's on your mind?">
+      <div class="input-group-append">
+        <button type="submit" class="btn btn-sm btn-primary"><span data-feather="edit-2"></span></button>
+      </div>
+    </div>
+  </form>
+</div>
+{% endif %}
+-->
 
 <div class="py-1 mb-3">
   <div class="card card-feed">

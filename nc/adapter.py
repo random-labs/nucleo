@@ -26,6 +26,17 @@ class AccountAdapter(DefaultAccountAdapter):
                 context=context
             )
 
+    def follow_own_feed(self, user):
+        """
+        Used for initialization of user so they're own activity is
+        in timeline activity feed.
+        """
+        get_queue_backend().delay(
+            nc_tasks.follow_user_feed,
+            follower_id=user.id,
+            user_id=user.id
+        )
+
     def follow_user(self, user):
         """
         Follow user's feed.
@@ -53,12 +64,13 @@ class AccountAdapter(DefaultAccountAdapter):
         Saves a new `User` instance using information provided in the
         signup form.
 
-        Extends to create a profile and portfolio for this new user and to note
-        that XLM is always a trusted asset.
+        Extends to create a profile and portfolio for this new user and
+        follows own timeline.
         """
         user = super(AccountAdapter, self).save_user(request, user, form)
         profile = Profile.objects.create(user=user)
         portfolio = Portfolio.objects.create(profile=profile)
+        self.follow_own_feed(user)
         return user
 
     def send_mail(self, template_prefix, email, context):
@@ -73,7 +85,8 @@ class AccountAdapter(DefaultAccountAdapter):
 
     def send_mail_to_many(self, template_prefix, recipient_list, context):
         """
-        Use django.core.mail.send_mass_mail() to bulk email.
+        Use django.core.mail.send_mass_mail() to bulk email with same
+        message to all recipients in recipient_list.
 
         https://docs.djangoproject.com/en/2.0/topics/email/#send-mass-mail
         """
@@ -95,5 +108,34 @@ class AccountAdapter(DefaultAccountAdapter):
         msgs = [
             self.render_mail(template_prefix, recipient, context)
             for recipient in recipient_list
+        ]
+        return msgs
+
+    def send_bulk_mail(self, template_prefix, recipient_context_list):
+        """
+        Use django.core.mail.send_mass_mail() to bulk email with different
+        messages for each recipient in recipient_context_list.
+
+        recipient_context_list is of form [ (recipient, context) ]
+        """
+        # Reformat EmailMessage instances into list of tuples (subject, message, from_email, recipient_list)
+        msgs = self.render_bulk_mail(template_prefix, recipient_context_list)
+        datatuple = tuple( (msg.subject, msg.body, msg.from_email, msg.to) for msg in msgs )
+
+        # Queue task to send emails
+        get_queue_backend().delay(nc_tasks.send_mail, datatuple=datatuple)
+
+    def render_bulk_mail(self, template_prefix, recipient_context_list):
+        """
+        Extends allauth adapter.render_mail to account for multiple recipients
+        with different context for each recipient.
+
+        Returns iterable of email messages to be sent out.
+
+        See: https://github.com/pennersr/django-allauth/blob/master/allauth/account/adapter.py
+        """
+        msgs = [
+            self.render_mail(template_prefix, recipient, context)
+            for recipient, context in recipient_context_list
         ]
         return msgs
