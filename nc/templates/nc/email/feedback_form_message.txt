@@ -1,5 +1,5 @@
 {% load i18n %}{% blocktrans with site_name=current_site.name site_domain=current_site.domain %}
-Hi @{{ username }},
+Hello @{{ username }}!
 
 We'd like your feedback on how best to improve Nucleo and make it something you love even more. We'd love to hear your thoughts on what's working so far and what's not.
 
