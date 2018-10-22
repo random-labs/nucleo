@@ -47,7 +47,7 @@ class AccountAdapter(DefaultAccountAdapter):
                     context=context
                 )
             except:
-                print "Unexpected error:", sys.exc_info()[0]
+                print "Unexpected error:", sys.exc_info()
 
             # Return the new Activity object instance
             return instance
