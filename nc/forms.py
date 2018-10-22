@@ -590,7 +590,6 @@ class FeedActivityCreateForm(forms.Form):
 
             # Add activity to user's feed
             instance = self.adapter.add_activity(kwargs)
-            print instance
 
             # Send an email to user receiving funds
             if object_email and object_profile and object_profile.allow_payment_email:
@@ -647,7 +646,6 @@ class FeedActivityCreateForm(forms.Form):
 
             # Add activity to user's feed
             instance = self.adapter.add_activity(kwargs)
-            print instance
 
             # Send a bulk email to all followers that a new token has been issued
             recipient_list = [ u.email for u in request_user_profile.followers\
@@ -715,7 +713,6 @@ class FeedActivityCreateForm(forms.Form):
 
                 # Add activity to user's feed
                 instance = self.adapter.add_activity(kwargs)
-                print instance
 
                 # Send an email to issuer of asset
                 asset_issuer_account = asset.issuer
@@ -774,7 +771,6 @@ class FeedActivityCreateForm(forms.Form):
 
             # Add activity to user's feed
             instance = self.adapter.add_activity(kwargs)
-            print instance
 
             # Send a bulk email to all followers that user has made a trade
             recipient_list = [ u.email for u in request_user_profile.followers\
@@ -859,7 +855,6 @@ class FeedPostCreateForm(forms.Form):
 
         # Add activity to user's feed
         instance = self.adapter.add_activity(kwargs)
-        print instance
 
         # Send a bulk email out to all followers that user has posted
         # TODO: separate out into mentions and just full on post
@@ -929,7 +924,6 @@ class FeedCommentUpdateForm(forms.Form):
 
         # Add comment to activity's feed
         instance = self.adapter.add_comment_to_activity(self.activity, kwargs)
-        print instance
 
         # Send bulk emails out to activity poster and any other commenters on activity item
         # that user has commented further on activity
@@ -1066,6 +1060,5 @@ class FeedRewardCreateForm(forms.Form):
 
         # Then update feed item in stream feed
         instance = get_adapter(self.request).reward_feed_item(self.feed_item, kwargs)
-        print instance
 
         return instance

@@ -89,7 +89,6 @@ class Account(models.Model):
             'reaction_url': build_absolute_uri(request, reverse('nc:activity-create')),
             'account': self.public_key
         }
-        print data
         r = requests.post(settings.STELLAR_NOTIFIER_SUBSCRIPTION_URL, data=data)
 
         # Store the returned notifier ID

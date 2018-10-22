@@ -1,3 +1,5 @@
+import sys
+
 from allauth.account.adapter import DefaultAccountAdapter
 from allauth.utils import build_absolute_uri
 
@@ -29,9 +31,6 @@ class AccountAdapter(DefaultAccountAdapter):
             instance = Activity.objects.create(verb=verb, user_id=self.request.user.id,
                 tx_hash=context.get('tx_hash'), created=created_time)
 
-            print 'instance created'
-            print instance.id
-
             # Update the context to include foreign_id as instance.id
             context['foreign_id'] = instance.id
             context['activity_url'] = build_absolute_uri(
@@ -39,21 +38,16 @@ class AccountAdapter(DefaultAccountAdapter):
                 reverse('nc:feed-activity-detail', kwargs={'pk': instance.id})
             )
 
-            print context
-
             # Queue task to add activity to user feed
-            print get_queue_backend()
-            print get_queue_backend().delay
-            print settings.STREAM_USER_FEED
-            print nc_tasks.add_activity_to_feed
-            print self.request.user.id
-            get_queue_backend().delay(
-                nc_tasks.add_activity_to_feed,
-                feed_type=settings.STREAM_USER_FEED,
-                feed_id=self.request.user.id,
-                context=context
-            )
-            print 'got here!'
+            try:
+                get_queue_backend().delay(
+                    nc_tasks.add_activity_to_feed,
+                    feed_type=settings.STREAM_USER_FEED,
+                    feed_id=self.request.user.id,
+                    context=context
+                )
+            except:
+                print "Unexpected error:", sys.exc_info()[0]
 
             # Return the new Activity object instance
             return instance
@@ -215,7 +209,6 @@ class AccountAdapter(DefaultAccountAdapter):
         datatuple = tuple( (msg.subject, msg.body, msg.from_email, msg.to) for msg in [ message ] )
 
         # Queue task to send email
-        print 'here'
         get_queue_backend().delay(nc_tasks.send_mail, datatuple=datatuple)
 
     def send_mail_to_many(self, template_prefix, recipient_list, context):
