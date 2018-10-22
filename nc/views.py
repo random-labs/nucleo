@@ -1870,6 +1870,7 @@ class WorkView(generic.View):
         if settings.ENV_NAME == 'work':
             # If worker environment, then can consume
             message = json.loads(request.body)
+            print message
             get_queue_backend().process(message)
             return HttpResponse()
         else:

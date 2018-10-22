@@ -57,4 +57,7 @@ class SQSBoto3QueueBackend(BaseQueueBackend):
         if task:
             args = message.get('args', [])
             kwargs = message.get('kwargs', {})
+            print task
+            print args
+            print kwargs
             task(*args, **kwargs)
