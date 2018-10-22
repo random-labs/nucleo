@@ -215,6 +215,7 @@ class AccountAdapter(DefaultAccountAdapter):
         datatuple = tuple( (msg.subject, msg.body, msg.from_email, msg.to) for msg in [ message ] )
 
         # Queue task to send email
+        print 'here'
         get_queue_backend().delay(nc_tasks.send_mail, datatuple=datatuple)
 
     def send_mail_to_many(self, template_prefix, recipient_list, context):

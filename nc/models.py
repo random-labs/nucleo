@@ -440,7 +440,7 @@ class Asset(models.Model):
 
     # NOTE: If None, then either doesn't have an account with us OR must be Lumens
     issuer = models.ForeignKey(Account, related_name='assets_issued',
-        on_delete=models.CASCADE, null=True, blank=True, default=None)
+        on_delete=models.SET_DEFAULT, null=True, blank=True, default=None)
 
     # NOTE: if None then must be Lumens: https://www.stellar.org/developers/guides/concepts/assets.html
     issuer_address = models.CharField(max_length=56, null=True, blank=True, default=None)
