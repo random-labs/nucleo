@@ -42,12 +42,17 @@ class AccountAdapter(DefaultAccountAdapter):
             print context
 
             # Queue task to add activity to user feed
+            print get_queue_backend()
+            print settings.STREAM_USER_FEED
+            print nc_tasks.add_activity_to_feed
+            print self.request.user.id
             get_queue_backend().delay(
                 nc_tasks.add_activity_to_feed,
                 feed_type=settings.STREAM_USER_FEED,
                 feed_id=self.request.user.id,
                 context=context
             )
+            print 'got here!'
 
             # Return the new Activity object instance
             return instance

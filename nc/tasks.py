@@ -24,6 +24,7 @@ def add_activity_to_feed(feed_type, feed_id, context):
     """
     Task to add activity to feed.
     """
+    print 'aloha'
     feed = feed_manager.get_feed(feed_type, feed_id)
     print feed
     resp = feed.add_activity(context)
