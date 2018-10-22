@@ -1,5 +1,3 @@
-import sys
-
 from allauth.account.adapter import DefaultAccountAdapter
 from allauth.utils import build_absolute_uri
 
@@ -39,15 +37,12 @@ class AccountAdapter(DefaultAccountAdapter):
             )
 
             # Queue task to add activity to user feed
-            try:
-                get_queue_backend().delay(
-                    nc_tasks.add_activity_to_feed,
-                    feed_type=settings.STREAM_USER_FEED,
-                    feed_id=self.request.user.id,
-                    context=context
-                )
-            except:
-                print "Unexpected error:", sys.exc_info()
+            get_queue_backend().delay(
+                nc_tasks.add_activity_to_feed,
+                feed_type=settings.STREAM_USER_FEED,
+                feed_id=self.request.user.id,
+                context=context
+            )
 
             # Return the new Activity object instance
             return instance

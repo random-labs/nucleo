@@ -25,6 +25,7 @@ def add_activity_to_feed(feed_type, feed_id, context):
     Task to add activity to feed.
     """
     feed = feed_manager.get_feed(feed_type, feed_id)
+    print context
     resp = feed.add_activity(context)
     inv_verb_choices = { v: k for k, v in dict(Activity.VERB_CHOICES).iteritems() }
     verb = inv_verb_choices.get(resp.get('verb', ''), -1)

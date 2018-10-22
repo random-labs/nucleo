@@ -1869,8 +1869,7 @@ class WorkView(generic.View):
     def post(self, request, *args, **kwargs):
         if settings.ENV_NAME == 'work':
             # If worker environment, then can consume
-            message = json.loads(request.body)
-            get_queue_backend().process(message)
+            get_queue_backend().process(request.body)
             return HttpResponse()
         else:
             return HttpResponseNotFound()

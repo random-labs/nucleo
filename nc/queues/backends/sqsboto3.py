@@ -1,6 +1,7 @@
 import boto3, importlib, json
 
 from django.conf import settings
+from django.core.serializers.json import DjangoJSONEncoder
 
 from nc import tasks as nc_tasks
 from nc.queues.backends.base import BaseQueueBackend
@@ -47,12 +48,13 @@ class SQSBoto3QueueBackend(BaseQueueBackend):
             'task': task.__name__,
             'args': args,
             'kwargs': kwargs,
-        })
+        }, cls=DjangoJSONEncoder)
 
     def process(self, message):
         """
         Process message in worker tier.
         """
+        message = json.loads(message)
         task = getattr(nc_tasks, message.get('task'), None)
         if task:
             args = message.get('args', [])
