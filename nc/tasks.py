@@ -25,11 +25,14 @@ def add_activity_to_feed(feed_type, feed_id, context):
     Task to add activity to feed.
     """
     feed = feed_manager.get_feed(feed_type, feed_id)
+    print feed
     resp = feed.add_activity(context)
+    print resp
     inv_verb_choices = { v: k for k, v in dict(Activity.VERB_CHOICES).iteritems() }
     verb = inv_verb_choices.get(resp.get('verb', ''), -1)
     if verb != -1:
         model_cls = Activity if verb != Activity.COMMENT else Comment
+        print model_cls
         model_cls.objects.update_from_stream_response(resp)
 
 @shared_task

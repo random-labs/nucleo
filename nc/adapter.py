@@ -29,12 +29,17 @@ class AccountAdapter(DefaultAccountAdapter):
             instance = Activity.objects.create(verb=verb, user_id=self.request.user.id,
                 tx_hash=context.get('tx_hash'), created=created_time)
 
+            print 'instance created'
+            print instance.id
+
             # Update the context to include foreign_id as instance.id
             context['foreign_id'] = instance.id
             context['activity_url'] = build_absolute_uri(
                 self.request,
                 reverse('nc:feed-activity-detail', kwargs={'pk': instance.id})
             )
+
+            print context
 
             # Queue task to add activity to user feed
             get_queue_backend().delay(
