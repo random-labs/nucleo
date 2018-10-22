@@ -38,15 +38,6 @@ class Command(BaseCommand):
         #     feed_manager.follow_user(u.id, u.id)
         #     created_self_feed_follows += 1
 
-        created_award_default = 0
-        for p in Profile.objects.filter(default_award_account=None)\
-            .annotate(num_accounts=Count('user__accounts'))\
-            .exclude(num_accounts=0):
-            # Save first account as award default
-            p.default_award_account = p.user.accounts.first()
-            p.save()
-            created_award_default += 1
-
-        print 'Created {0} profiles, {1} portfolios, {2} award account defaults'.format(
-            created_profile, created_portfolio, created_award_default
+        print 'Created {0} profiles, {1} portfolios'.format(
+            created_profile, created_portfolio
         )
