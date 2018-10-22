@@ -10,7 +10,7 @@ from allauth.utils import build_absolute_uri
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.contrib.sites.shortcuts import get_current_site
 from django.db.models import (
     Avg, BooleanField, Case, ExpressionWrapper, F, FloatField,
@@ -44,8 +44,8 @@ from urlparse import urlparse
 
 from . import forms, mixins
 from .models import (
-    Account, AccountFundRequest, Asset, FollowRequest, Portfolio,
-    portfolio_data_collector, Profile, RawPortfolioData,
+    Account, AccountFundRequest, Activity, Asset, FollowRequest, Portfolio,
+    portfolio_data_collector, Profile, RawPortfolioData, Reward
 )
 from .queues import get_queue_backend
 
@@ -116,6 +116,12 @@ class HomeView(generic.TemplateView):
         assets.sort(key=lambda a: getattr(a, 'activityScore'), reverse=True)
 
         context['asset_list'] = assets[:5]
+
+        # Build list of Nucleo team members
+        nucleo_member_usernames = [ 'mikey.rf' ]
+        context['nucleo_members'] = get_user_model().objects\
+            .filter(username__in=nucleo_member_usernames)\
+            .prefetch_related('assets_trusting', 'profile__portfolio')
 
         return context
 
@@ -335,10 +341,10 @@ class UserSettingsUpdateView(LoginRequiredMixin, mixins.PrefetchedSingleObjectMi
         https://django-betterforms.readthedocs.io/en/latest/multiform.html#working-with-updateview
         """
         kwargs = super(UserSettingsUpdateView, self).get_form_kwargs()
-        #kwargs.update(instance=self.object.profile)
         kwargs.update(instance={
             'email': self.object.profile,
             'privacy': self.object.profile,
+            'reward': self.object.profile,
         })
         return kwargs
 
@@ -434,8 +440,9 @@ class UserFollowUpdateView(LoginRequiredMixin, mixins.PrefetchedSingleObjectMixi
                     'object_username': self.object.username,
                     'object_pic_url': self.object.profile.pic_url(),
                     'object_href': self.object.profile.href(),
+                    'time': timezone.now()
                 }
-                self.adapter.add_activity(ctx_activity)
+                instance = self.adapter.add_activity(ctx_activity)
 
                 # Send an email to user being followed
                 if self.object.profile.allow_follower_email:
@@ -488,17 +495,16 @@ class UserFollowRequestUpdateView(LoginRequiredMixin, mixins.PrefetchedSingleObj
         """
         self.object = self.get_object()
         self.success_url = request.POST.get('success_url', None)
+        self.adapter = get_adapter(request)
 
         # Simply add to list of followers
         request.user.profile.followers.add(self.object)
         feed_manager.follow_user(self.object.id, request.user.id)
 
         # Add new activity to feed of user following
-        # NOTE: Not using stream-django model mixin because don't want Follow model
-        # instances in the Nucleo db. Adapted from feed_manager.add_activity_to_feed()
         feed = feed_manager.get_feed(settings.STREAM_USER_FEED, self.object.id)
         request_user_profile = request.user.profile
-        feed.add_activity({
+        ctx_activity = {
             'actor': self.object.id,
             'verb': 'follow',
             'object': request.user.id,
@@ -508,7 +514,9 @@ class UserFollowRequestUpdateView(LoginRequiredMixin, mixins.PrefetchedSingleObj
             'object_username': request.user.username,
             'object_pic_url': request_user_profile.pic_url(),
             'object_href': request_user_profile.href(),
-        })
+            'time': timezone.now() # NOTE: need naive to be consistent with stream
+        }
+        instance = self.adapter.add_activity(ctx_activity)
 
         # Delete the follow request
         self.follow_request.delete()
@@ -525,7 +533,7 @@ class UserFollowRequestUpdateView(LoginRequiredMixin, mixins.PrefetchedSingleObj
                 'profile_url': profile_url,
                 'email_settings_url': email_settings_url,
             }
-            get_adapter(request).send_mail('nc/email/feed_activity_follow_confirm',
+            self.adapter.send_mail('nc/email/feed_activity_follow_confirm',
                 self.object.email, ctx_email)
 
         return HttpResponseRedirect(self.get_success_url())
@@ -818,6 +826,8 @@ class AccountDeleteView(LoginRequiredMixin, mixins.IndexContextMixin,
     slug_field = 'public_key'
     success_url = reverse_lazy('nc:user-redirect')
     view_type = 'profile'
+
+    # TODO: if this is user's default account, set to next possible default!
 
     def get_queryset(self):
         """
@@ -1298,8 +1308,10 @@ class AssetTrustedByListView(LoginRequiredMixin, mixins.IndexContextMixin,
 
 class AssetTopListView(mixins.IndexContextMixin, mixins.ViewTypeContextMixin,
     mixins.LoginRedirectContextMixin, mixins.ActivityFormContextMixin,
-    mixins.DepositAssetsContextMixin, mixins.UserFollowerRequestsContextMixin,
+    mixins.DepositAssetsContextMixin, mixins.FeedActivityContextMixin,
+    mixins.PostFormContextMixin, mixins.UserFollowerRequestsContextMixin,
     mixins.UserPortfolioContextMixin, generic.ListView):
+    feed_type = settings.STREAM_TIMELINE_FEED
     template_name = "nc/asset_top_list.html"
     paginate_by = 50
     user_field = 'request.user'
@@ -1411,9 +1423,12 @@ class LeaderboardRedirectView(generic.RedirectView):
     pattern_name = 'nc:leaderboard-list'
 
 class LeaderboardListView(mixins.IndexContextMixin, mixins.ViewTypeContextMixin,
-    mixins.LoginRedirectContextMixin, mixins.DepositAssetsContextMixin,
+    mixins.LoginRedirectContextMixin, mixins.FeedActivityContextMixin,
+    mixins.DepositAssetsContextMixin, mixins.PostFormContextMixin,
     mixins.UserFollowerRequestsContextMixin, mixins.UserPortfolioContextMixin,
     generic.ListView):
+    feed_type = settings.STREAM_TIMELINE_FEED
+    user_field = 'request.user'
     template_name = "nc/leaderboard_list.html"
     paginate_by = 50
     view_type = 'leaderboard'
@@ -1561,12 +1576,59 @@ class FeedNewsListView(LoginRequiredMixin, mixins.IndexContextMixin,
 ### Activity
 class FeedActivityListView(LoginRequiredMixin, mixins.IndexContextMixin,
     mixins.FeedActivityContextMixin, mixins.DepositAssetsContextMixin,
-    mixins.UserFollowerRequestsContextMixin, mixins.UserPortfolioContextMixin,
-    mixins.ViewTypeContextMixin, generic.TemplateView):
+    mixins.PostFormContextMixin, mixins.UserFollowerRequestsContextMixin,
+    mixins.UserPortfolioContextMixin, mixins.ViewTypeContextMixin,
+    generic.TemplateView):
     feed_type = settings.STREAM_TIMELINE_FEED
     template_name = "nc/feed_activity_list.html"
     user_field = 'request.user'
     view_type = 'feed'
+
+class FeedActivityDetailView(LoginRequiredMixin,
+    mixins.PrefetchedSingleObjectMixin, mixins.IndexContextMixin,
+    mixins.FeedActivityContextMixin, mixins.ViewTypeContextMixin,
+    generic.DetailView):
+    model = Activity
+    feed_type = settings.STREAM_ACTIVITY_FEED
+    prefetch_related_lookups = ['user__profile']
+    template_name = "nc/feed_activity.html"
+    activity_field = 'object'
+    view_type = 'feed'
+
+    def get_context_data(self, **kwargs):
+        """
+        Provide a cryptographically signed username of authenticated user
+        for add Stellar account if detail object is current user.
+        """
+        context = super(FeedActivityDetailView, self).get_context_data(**kwargs)
+        if self.object and self.object.activity_id:
+            # Update the context for stream activity feed item and include
+            # dict for easy retrieval of feather icon types
+            resp = stream_client.get_activities(ids=[self.object.activity_id])
+            if len(resp["results"]) > 0:
+                context['activity'] = resp["results"][0]
+                context["icons"] = {
+                    'post': 'edit-2',
+                    'send': 'send',
+                    'issue': 'anchor',
+                    'trust': 'shield',
+                    'offer': 'trending-up',
+                    'follow': 'activity',
+                    'comment': 'message-circle',
+                }
+        return context
+
+    def get_object(self, queryset=None):
+        """
+        Throw a 404 if request.user does not follow activity.user.
+        """
+        obj = super(FeedActivityDetailView, self).get_object(queryset)
+        obj_user = obj.user
+        if obj_user != self.request.user and not obj.user.profile.followers.filter(id=self.request.user.id).exists():
+            raise Http404(_("No %(verbose_name)s found matching the query") %
+                          {'verbose_name': self.model._meta.verbose_name})
+        return obj
+
 
 class FeedActivityCreateView(LoginRequiredMixin, mixins.IndexContextMixin,
     mixins.ViewTypeContextMixin, generic.CreateView):
@@ -1608,6 +1670,112 @@ class FeedActivityCreateView(LoginRequiredMixin, mixins.IndexContextMixin,
         self.object = form.save()
         self.success_url = self.object.get('success_url') if 'success_url' in self.object else self.success_url
         return HttpResponseRedirect(self.get_success_url())
+
+class FeedPostCreateView(LoginRequiredMixin, mixins.AjaxableResponseMixin,
+    mixins.IndexContextMixin, mixins.ViewTypeContextMixin, generic.CreateView):
+    form_class = forms.FeedPostCreateForm
+    success_url = reverse_lazy('nc:feed-redirect')
+    template_name = "nc/feed_post_form.html"
+    view_type = 'feed'
+
+    def get_form_kwargs(self):
+        """
+        Need to override to pass in the request for authenticated user.
+
+        Pop instance key since FeedPostCreateForm is not actually a ModelForm.
+        """
+        kwargs = super(FeedPostCreateView, self).get_form_kwargs()
+        kwargs.update({
+            'request': self.request,
+            'success_url': self.request.POST.get('success_url')
+        })
+        kwargs.pop('instance')
+        return kwargs
+
+    def get_success_url(self):
+        """
+        If success url passed into query param, then use for redirect.
+
+        Otherwise, simply redirect to assets section of actor user's
+        profile page for immediate feedback.
+        """
+        if self.success_url:
+            return self.success_url
+        return reverse('nc:user-detail', kwargs={'slug': self.request.user.username})
+
+    def form_valid(self, form):
+        """
+        Override to accomodate success_url determined from parsing retrieval of
+        Stellar transaction of tx_hash.
+        """
+        self.object = form.save()
+        self.success_url = self.object.get('success_url') if 'success_url' in self.object else self.success_url
+        return HttpResponseRedirect(self.get_success_url())
+
+class FeedCommentUpdateView(LoginRequiredMixin, mixins.AjaxableResponseMixin,
+    mixins.IndexContextMixin, mixins.ViewTypeContextMixin, generic.UpdateView):
+    model = Activity
+    form_class = forms.FeedCommentUpdateForm
+    success_url = reverse_lazy('nc:feed-redirect')
+    template_name = "nc/feed_comment_update_form.html"
+    view_type = 'feed'
+
+    def get_form_kwargs(self):
+        """
+        Need to override to pass in the request for authenticated user.
+
+        Pop instance key since FeedCommentUpdateForm is not actually a ModelForm.
+        """
+        kwargs = super(FeedCommentUpdateView, self).get_form_kwargs()
+        kwargs.update({
+            'request': self.request,
+            'activity': self.object,
+            'success_url': self.request.POST.get('success_url')
+        })
+        kwargs.pop('instance')
+        return kwargs
+
+    def get_success_url(self):
+        """
+        If success url passed into query param, then use for redirect.
+
+        Otherwise, simply redirect to assets section of actor user's
+        profile page for immediate feedback.
+        """
+        if self.success_url:
+            return self.success_url
+        return reverse('nc:feed-activity-detail', kwargs={'pk': self.object.id})
+
+    def form_valid(self, form):
+        """
+        Override to accomodate success_url determined from parsing retrieval of
+        Stellar transaction of tx_hash.
+        """
+        self.instance = form.save()
+        self.success_url = self.instance.get('success_url') if 'success_url' in self.instance else self.success_url
+        return HttpResponseRedirect(self.get_success_url())
+
+class FeedRewardCreateView(LoginRequiredMixin, mixins.AjaxableResponseMixin,
+    mixins.IndexContextMixin, mixins.ViewTypeContextMixin, generic.CreateView):
+    form_class = forms.FeedRewardCreateForm
+    success_url = reverse_lazy('nc:feed-redirect')
+    template_name = "nc/feed_reward_form.html"
+    view_type = 'feed'
+
+    def get_form_kwargs(self):
+        """
+        Need to override to pass in the request for authenticated user.
+
+        Pop instance key since FeedRewardCreateForm is not actually a ModelForm.
+        """
+        kwargs = super(FeedRewardCreateView, self).get_form_kwargs()
+        kwargs.update({
+            'request': self.request,
+            'success_url': self.request.POST.get('success_url')
+        })
+        kwargs.pop('instance')
+        return kwargs
+
 
 ## Send
 class SendRedirectView(LoginRequiredMixin, generic.RedirectView):

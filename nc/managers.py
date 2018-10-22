@@ -1,5 +1,9 @@
+import pytz
+
 from algoliasearch_django import update_records
+
 from django.db import models
+from django.utils.dateparse import parse_datetime
 
 
 class ActivityManager(models.Manager):
@@ -13,8 +17,21 @@ class ActivityManager(models.Manager):
         user_id = int(resp.get('actor'))
         activity_id = resp.get('id')
         tx_hash = resp.get('tx_hash')
+        created = pytz.timezone("UTC").localize(parse_datetime(resp.get('time')), is_dst=None) # NOTE: resp['time'] is in UTC but stream stores as timezone unaware
         return self.create(verb=verb, user_id=user_id,
-            activity_id=activity_id, tx_hash=tx_hash)
+            activity_id=activity_id, tx_hash=tx_hash, created=created)
+
+    def update_from_stream_response(self, resp):
+        """
+        Update an activity instance from the response of
+        stream_feed.add_activity().
+
+        resp['foreign_id'] will be the instance.id of the Activity looking
+        to update.
+        """
+        id = int(resp.get('foreign_id'))
+        activity_id = resp.get('id')
+        return self.filter(id=id).update(activity_id=activity_id)
 
 
 class AssetManager(models.Manager):
@@ -45,4 +62,19 @@ class CommentManager(models.Manager):
         """
         parent_id = int(resp.get('object')) # NOTE: object is the id of parent activity user commented on
         activity_id = resp.get('id')
-        return self.create(parent_id=parent_id, activity_id=activity_id)
+        user_id = int(resp.get('actor')) # NOTE: actor is the user making the comment
+        created = pytz.timezone("UTC").localize(parse_datetime(resp.get('time')), is_dst=None) # NOTE: resp['time'] is in UTC but stream stores as timezone unaware
+        return self.create(parent_id=parent_id, activity_id=activity_id,
+            user_id=user_id, created=created)
+
+    def update_from_stream_response(self, resp):
+        """
+        Update a comment instance from the response of
+        stream_feed.add_activity().
+
+        resp['foreign_id'] will be the instance.id of the Comment looking
+        to update.
+        """
+        id = int(resp.get('foreign_id'))
+        activity_id = resp.get('id')
+        return self.filter(id=id).update(activity_id=activity_id)

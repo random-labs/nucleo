@@ -1,0 +1,31 @@
+{% extends "nc/base.html" %}
+{% load static %}
+{% load bootstrap %}
+{% load humanize %}
+{% load nc_extras %}
+
+{% block head %}{% endblock %}
+
+{% block nc_style %}
+<link rel="stylesheet" type="text/css" href='{% static 'nc/feed.css' %}' />
+{% endblock %}
+
+{% block title %}Add Comment To Activity | Nucleo{% endblock %}
+
+{% block main %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-0 mb-3 border-bottom">
+  <h1 class="h2">Add Comment To Activity</h1>
+</div>
+<form class="form-update" method="POST" enctype="multipart/form-data" action="{% url 'nc:feed-comment-update' object.id %}">
+  {% csrf_token %}
+  {{ form|bootstrap_horizontal }}
+  <div class="my-4 pt-3 border-top">
+    <a href="{% url 'nc:feed-activity-detail' object.id %}" class="btn btn-secondary m-1">Cancel</a>
+    <button class="btn btn-primary m-1" type="submit">Submit</button>
+  </div>
+</form>
+{% endblock %}
+
+
+{% block nc_script %}
+{% endblock %}

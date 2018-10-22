@@ -139,19 +139,41 @@
   </form>
 </div>
 
-<!-- TODO:
-<div class="mb-4">
-  <form method="POST" action="">
+<!-- Reward activity modal -->
+<div class="modal fade" id="rewardActivityModal" tabindex="-1" role="dialog" aria-labelledby="rewardActivityModalTitle" aria-hidden="true">
+  <form method="POST" id="rewardActivityModalForm">
     {% csrf_token %}
-    <div class="input-group">
-      <input class="form-control form-control-lg" type="text" placeholder="What crypto's on your mind?">
-      <div class="input-group-append">
-        <button type="submit" class="btn btn-sm btn-primary"><span data-feather="edit-2"></span></button>
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="rewardActivityModalTitle">Reward With Lumens</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <h5 id="rewardActivityModalHeader" class="pt-1 mb-3 modal-body-header"></h5>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+          <button type="submit" class="btn btn-primary ladda-button" data-style="expand-left" data-size="s" {% if request.user.accounts.count == 0 %}disabled{% endif %}><span class="ladda-label">Send Reward</span></button>
+        </div>
       </div>
     </div>
   </form>
 </div>
--->
+
+<div class="mb-4">
+  <form method="POST" id="postForm" action="{% url 'nc:feed-post-create' %}" data-success="">
+    {% csrf_token %}
+    <div class="input-group">
+      <input class="form-control form-control-lg" type="text" name="message" maxlength="255" placeholder="What crypto's on your mind?" required>
+      <div class="input-group-append">
+        <button type="submit" class="btn btn-sm btn-primary ladda-button" data-style="expand-left" data-size="xs"><span class="ladda-label"><span data-feather="edit-2"></span></span></button>
+      </div>
+    </div>
+  </form>
+</div>
 
 {% if request.user.follower_requests.count > 0 %}
 <div class="card card-requests mb-4">
@@ -190,6 +212,11 @@
   <div class="card-body p-0 m-0">
     <ul class="nav nav-pills nav-justified">
       <li class="nav-item">
+        <a title="Feed" class="nav-link btn-outline-info rounded-0 rounded-right active" href="{% url 'nc:feed-redirect' %}">
+          <span data-feather="activity"></span>
+        </a>
+      </li>
+      <li class="nav-item">
         <a title="Leaderboard" class="nav-link btn-outline-warning rounded-0 rounded-left" href="{% url 'nc:leaderboard-redirect' %}">
           <span data-feather="award"></span>
         </a>
@@ -197,11 +224,6 @@
       <li class="nav-item">
         <a title="Trade" class="nav-link btn-outline-success rounded-0" href="{% url 'nc:trade-redirect' %}">
           <span data-feather="trending-up"></span>
-        </a>
-      </li>
-      <li class="nav-item">
-        <a title="Feed" class="nav-link btn-outline-info rounded-0 rounded-right active" href="{% url 'nc:feed-redirect' %}">
-          <span data-feather="activity"></span>
         </a>
       </li>
     </ul>
@@ -228,13 +250,18 @@
 
 {% block nc_script %}
 <script>
+  const CURRENT_USER_ID = {% if request.user.is_authenticated %}{{ request.user.id }}{% else %}null{% endif %};
+</script>
+<script>
   const STREAM_API_KEY = "{{ stream_api_key }}",
         STREAM_FEED_TYPE = "{{ stream_feed_type }}",
         STREAM_FEED_ID = "{{ stream_feed_id }}",
         STREAM_FEED_TOKEN = "{{ stream_feed_token }}",
+        STREAM_FEED_LISTEN = true,
         STREAM_FEED_LIMIT = 25;
 </script>
 <script src="{% static 'getstream/js/getstream.min.js' %}"></script>
+<script src="{% static 'nc/scripts/feed_activity.js' %}"></script>
 <script>
   const PAPAYA_API_DEPOSIT_URL = "{{ papaya_api_deposit_url }}",
         PAPAYA_ASSET_TRUST_LINKS = {
@@ -244,5 +271,4 @@
         };
 </script>
 <script src="{% static 'nc/scripts/deposit.js' %}"></script>
-<script src="{% static 'nc/scripts/feed_activity.js' %}"></script>
 {% endblock %}

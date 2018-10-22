@@ -516,21 +516,19 @@
   <h1 id="activity" class="h2">Activity</h1>
 </div>
 
-<!-- TODO:
 {% if object.id == request.user.id %}
 <div class="mb-1">
-  <form method="POST" action="">
+  <form method="POST" id="postForm" action="{% url 'nc:feed-post-create' %}" data-success="">
     {% csrf_token %}
     <div class="input-group">
-      <input class="form-control form-control-lg" type="text" placeholder="What crypto's on your mind?">
+      <input class="form-control form-control-lg" type="text" name="message" maxlength="255" placeholder="What crypto's on your mind?" required>
       <div class="input-group-append">
-        <button type="submit" class="btn btn-sm btn-primary"><span data-feather="edit-2"></span></button>
+        <button type="submit" class="btn btn-sm btn-primary ladda-button" data-style="expand-left" data-size="xs"><span class="ladda-label"><span data-feather="edit-2"></span></span></button>
       </div>
     </div>
   </form>
 </div>
 {% endif %}
--->
 
 <div class="py-1 mb-3">
   <div class="card card-feed">
@@ -818,9 +816,12 @@
         STREAM_FEED_TYPE = "{{ stream_feed_type }}",
         STREAM_FEED_ID = "{{ stream_feed_id }}",
         STREAM_FEED_TOKEN = "{{ stream_feed_token }}",
+        STREAM_FEED_LISTEN = true,
+        STREAM_FEED_ORDER = "{{ stream_feed_order }}",
         STREAM_FEED_LIMIT = 5;
 </script>
 <script src="{% static 'getstream/js/getstream.min.js' %}"></script>
+<script src="{% static 'nc/scripts/feed_activity.js' %}"></script>
 <script>
   const PAPAYA_API_DEPOSIT_URL = "{{ papaya_api_deposit_url }}",
         PAPAYA_ASSET_TRUST_LINKS = {
@@ -830,5 +831,4 @@
         };
 </script>
 <script src="{% static 'nc/scripts/deposit.js' %}"></script>
-<script src="{% static 'nc/scripts/feed_activity.js' %}"></script>
 {% endblock %}

@@ -6,6 +6,7 @@ from django.core.mail import send_mass_mail
 
 from celery import shared_task
 
+from stream_django.client import stream_client
 from stream_django.feed_manager import feed_manager
 
 from .models import Activity, Comment
@@ -26,10 +27,17 @@ def add_activity_to_feed(feed_type, feed_id, context):
     feed = feed_manager.get_feed(feed_type, feed_id)
     resp = feed.add_activity(context)
     inv_verb_choices = { v: k for k, v in dict(Activity.VERB_CHOICES).iteritems() }
-    verb = inv_verb_choices.get(resp.get('verb', ''))
-    if verb:
+    verb = inv_verb_choices.get(resp.get('verb', ''), -1)
+    if verb != -1:
         model_cls = Activity if verb != Activity.COMMENT else Comment
-        model_cls.objects.create_from_stream_response(resp)
+        model_cls.objects.update_from_stream_response(resp)
+
+@shared_task
+def update_activity_in_feed(activity_id, set={}, unset=[]):
+    """
+    Update an activity in feed.
+    """
+    stream_client.activity_partial_update(id=activity_id, set=set, unset=unset)
 
 @shared_task
 def follow_user_feed(follower_id, user_id):

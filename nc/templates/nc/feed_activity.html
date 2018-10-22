@@ -1,0 +1,142 @@
+{% extends "nc/base.html" %}
+{% load static %}
+{% load bootstrap %}
+{% load mathfilters %}
+{% load humanize %}
+{% load nc_extras %}
+
+{% block head %}{% endblock %}
+
+{% block nc_style %}
+<link rel="stylesheet" type="text/css" href='{% static 'nc/feed.css' %}' />
+{% endblock %}
+
+{% block title %}@{{ activity.actor_username }}: {% if activity.message %}{{ activity.message }}{% elif activity.memo %}{{ activity.memo }}{% endif %} | Nucleo{% endblock %}
+
+{% block main %}
+<div class="mb-2">
+  <a href="{% url 'nc:feed-redirect' %}">Back To Feed</a>
+</div>
+
+<div class="list-group mb-3">
+  <div class="list-group-item d-flex justify-content-between px-4 pt-4 pb-3" data-id="{{ activity.id }}">
+    <div class="d-flex align-content-start">
+      <div class="position-relative">
+        <a href="{{ activity.actor_href }}"><img class="img-object-fit-cover rounded" style="height: 60px; width: 60px;" src="{{ activity.actor_pic_url }}" alt=""></a>
+        {% if activity.verb != 'post' and activity.verb != 'comment' %}
+        {% if activity.verb == 'send' %}
+        <a href="{{ activity.asset_href }}"><img class="img-object-fit-cover img-thumbnail rounded-circle position-absolute" style="height: 40px; width: 40px; top: -15px; left: -15px;" src="{{ activity.asset_pic_url }}" alt=""></a>
+        {% else %}
+        <a href="{{ activity.object_href }}"><img {% if activity.verb == 'follow' %}class="img-object-fit-cover img-thumbnail rounded position-absolute"{% else %}class="img-object-fit-cover img-thumbnail rounded-circle position-absolute"{% endif %} style="height: 40px; width: 40px; top: -15px; left: -15px;" src="{{ activity.object_pic_url }}" alt=""></a>
+        {% endif %}
+        {% endif %}
+      </div>
+      <div class="d-flex flex-column align-items-start mx-3">
+        {% if activity.verb == 'post' %}
+        <span><a href="{{ activity.actor_href }}" class="text-dark font-weight-bold">@{{ activity.actor_username }}</a> posted</span>
+        {% elif activity.verb == 'send' %}
+        <span><a href="{{ activity.actor_href }}" class="text-dark font-weight-bold">@{{ activity.actor_username }}</a> sent {{ activity.amount }} <a href="{{ activity.asset_href }}" class="text-dark font-weight-bold">{% if activity.asset_type == 'native' %}XLM{% else %}{{ activity.asset_code }}{% endif %}</a> to <a href="{{ activity.object_href }}" class="text-dark font-weight-bold">@{{ activity.object_username }}</a></span>
+        {% elif activity.verb == 'issue' %}
+        <span>Tokens issued: <a href="{{ activity.actor_href }}" class="text-dark font-weight-bold">@{{ activity.actor_username }}</a> issued {{ activity.amount }} new <a href="{{ activity.object_href }}" class="text-dark font-weight-bold">{% if activity.object_type == 'native' %}XLM{% else %}{{ activity.object_code }}{% endif %}</a> from <a {% if debug %}href="https://stellar.expert/explorer/testnet/account/{{ activity.object_issuer }}"{% else %}href="https://stellar.expert/explorer/public/account/{{ activity.object_issuer }}"{% endif %} class="text-info" target="_blank">{{ activity.object_issuer|truncatechars:10 }}{{ activity.object_issuer|slice:"-7:" }}</a></span>
+        {% elif activity.verb == 'offer' %}
+        {% if activity.offer_type == 'buying' %}
+        <span><a href="{{ activity.actor_href }}" class="text-dark font-weight-bold">@{{ activity.actor_username }}</a> offered to buy {{ activity.amount|mul:activity.price|floatformat:"-7" }} <a href="{{ activity.object_href }}" class="text-dark font-weight-bold">{% if activity.object_type == 'native' %}XLM{% else %}{{ activity.object_code }}{% endif %}</a> at a price of {{ 1.0|div:activity.price|floatformat:"-7" }} XLM</span>
+        {% else %}
+        <span><a href="{{ activity.actor_href }}" class="text-dark font-weight-bold">@{{ activity.actor_username }}</a> offered to sell {{ activity.amount }} <a href="{{ activity.object_href }}" class="text-dark font-weight-bold">{% if activity.object_type == 'native' %}XLM{% else %}{{ activity.object_code }}{% endif %}</a> at a price of {{ activity.price }} XLM</span>
+        {% endif %}
+        {% elif activity.verb == 'follow' %}
+        <span><a href="{{ activity.actor_href }}" class="text-dark font-weight-bold">@{{ activity.actor_username }}</a> started following <a href="{{ activity.object_href }}" class="text-dark font-weight-bold">@{{ activity.object_username }}</a></span>
+        {% elif activity.verb == 'trust' %}
+        <span><a href="{{ activity.actor_href }}" class="text-dark font-weight-bold">@{{ activity.actor_username }}</a> trusted <a href="{{ activity.object_href }}" class="text-dark font-weight-bold">{% if activity.object_type == 'native' %}XLM{% else %}{{ activity.object_code }}{% endif %}</a></span>
+        {% endif %}
+        <div class="h3 pt-2">{% if activity.message %}{{ activity.message }}{% elif activity.memo %}{{ activity.memo }}{% endif %}</div>
+        <div><small class="text-muted">{{ activity.time|naturaltime }}</small></div>
+        {% if activity.tx_hash %}
+        <div><small>Tx #: <a href="{{ activity.tx_href }}" class="text-info" title="Stellar Transaction Hash" target="_blank">{{ activity.tx_hash|truncatechars:10 }}{{ activity.tx_hash|slice:"-7:" }}</a></small></div>
+        {% endif %}
+        <div class="d-flex flex-row justify-content-start mt-2">
+          <!--TODO: <div class="pr-4"><button {% if activity.liked_by and request.user.id in activity.liked_by %}class="btn btn-link text-danger p-0"{% else %}class="btn btn-link text-dark p-0"{% endif %}><span data-feather="heart"></span><small class="pl-1">{% if activity.likes_count and activity.likes_count > 0 %}{{ activity.likes_count }}{% endif %}</small></button></div>-->
+          <!--TODO: <div class="pr-4"><button {% if activity.rewarded_by and request.user.id in activity.rewarded_by %}class="btn btn-link text-warning p-0"{% else %}class="btn btn-link text-dark p-0"{% endif %}><span data-feather="award"></span><small class="pl-1">{% if activity.rewards_total and activity.rewards_total > 0 %}{{ activity.rewards_total|intword }}{% endif %}</small></button></div>-->
+          <div class="pr-4"><button {% if activity.commented_by and request.user.id in activity.commented_by %}class="btn btn-link text-primary p-0"{% else %}class="btn btn-link text-dark p-0"{% endif %}><span data-feather="message-circle"></span><small class="pl-1">{% if activity.comments_count and activity.comments_count > 0 %}{{ activity.comments_count }}{% endif %}</small></button></div>
+        </div>
+      </div>
+    </div>
+    {% with icons|get_item:activity.verb as icon %}
+    <span data-feather={{ icon }}></span>
+    {% endwith %}
+  </div>
+  <!-- TODO: Liked by view and rewarded by view for hrefs below -->
+  <div class="card-footer border d-flex flex-row">
+    <!--{% if activity.likes_count and activity.likes_count > 0 %}<a href="" class="text-dark pr-2"><small><span class="font-weight-bold">{{ activity.likes_count|intword }}</span> Likes</small></a>{% endif %}-->
+    <!--{% if activity.rewards_total and activity.rewards_total > 0 %}<a href="" class="text-dark pr-2"><small><span class="font-weight-bold">{{ rewards_total|intword }} XLM</span> Rewards</small></a>{% endif %}-->
+  </div>
+</div>
+
+<!-- Reward activity modal -->
+<div class="modal fade" id="rewardActivityModal" tabindex="-1" role="dialog" aria-labelledby="rewardActivityModalTitle" aria-hidden="true">
+  <form method="POST" id="rewardActivityModalForm">
+    {% csrf_token %}
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="rewardActivityModalTitle">Reward With Lumens</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <h5 id="rewardActivityModalHeader" class="pt-1 mb-3 modal-body-header"></h5>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+          <button type="submit" class="btn btn-primary ladda-button" data-style="expand-left" data-size="s" {% if request.user.accounts.count == 0 %}disabled{% endif %}><span class="ladda-label">Send Reward</span></button>
+        </div>
+      </div>
+    </div>
+  </form>
+</div>
+
+<div class="mb-4">
+  <form method="POST" action="{% url 'nc:feed-comment-update' object.id %}">
+    {% csrf_token %}
+    <div class="input-group">
+      <input class="form-control form-control-lg" type="text" name="message" maxlength="255" placeholder="Add a comment ..." required>
+      <div class="input-group-append">
+        <button type="submit" class="btn btn-sm btn-primary"><span data-feather="edit-2"></span></button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<div class="card card-feed">
+  <div class="card-header border-0 d-flex flex-wrap justify-content-between align-items-center">
+    <div class="mb-1 d-flex flex-column justify-content-between align-items-start">
+      <h5>Comments From Friends</h5>
+    </div>
+  </div>
+  <div class="card-body p-0">
+    <ul id="activityList" class="list-group">
+    </ul>
+  </div>
+  <div class="card-footer border-0 d-flex justify-content-start align-items-center">
+    <button id="moreButton" type="button" class="btn btn-sm btn-link more-feed p-0" data-parent="#activityList" data-has_more="true" data-id_lt="">More</button>
+  </div>
+</div>
+{% endblock %}
+
+
+{% block nc_script %}
+<script>
+  const CURRENT_USER_ID = {% if request.user.is_authenticated %}{{ request.user.id }}{% else %}null{% endif %};
+</script>
+<script>
+  const STREAM_API_KEY = "{{ stream_api_key }}",
+        STREAM_FEED_TYPE = "{{ stream_feed_type }}",
+        STREAM_FEED_ID = "{{ stream_feed_id }}",
+        STREAM_FEED_TOKEN = "{{ stream_feed_token }}",
+        STREAM_FEED_LISTEN = true,
+        STREAM_FEED_LIMIT = 25;
+</script>
+<script src="{% static 'getstream/js/getstream.min.js' %}"></script>
+<script src="{% static 'nc/scripts/feed_activity.js' %}"></script>
+{% endblock %}

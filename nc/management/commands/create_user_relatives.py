@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
+from django.db.models import Count
 
 from nc.models import Portfolio, Profile
 from nc.tasks import follow_user_feed
@@ -12,8 +13,9 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         """
         Management command to ensure each user object has
-        an associated profile and portfolio instance and is
-        following his/her own activity feed for proper timeline.
+        an associated profile, portfolio instance, is
+        following his/her own activity feed for proper timeline,
+        and has a default account to receive awards.
         """
         # NOTE: Expensive but necessary. Not using bulk_create to ensure that
         # search indices are also updated
@@ -36,6 +38,15 @@ class Command(BaseCommand):
         #     feed_manager.follow_user(u.id, u.id)
         #     created_self_feed_follows += 1
 
-        print 'Created {0} profiles and {1} portfolios'.format(
-            created_profile, created_portfolio
+        created_award_default = 0
+        for p in Profile.objects.filter(default_award_account=None)\
+            .annotate(num_accounts=Count('user__accounts'))\
+            .exclude(num_accounts=0):
+            # Save first account as award default
+            p.default_award_account = p.user.accounts.first()
+            p.save()
+            created_award_default += 1
+
+        print 'Created {0} profiles, {1} portfolios, {2} award account defaults'.format(
+            created_profile, created_portfolio, created_award_default
         )

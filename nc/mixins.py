@@ -158,6 +158,30 @@ class ActivityFormContextMixin(object):
         return kwargs
 
 
+class PostFormContextMixin(object):
+    """
+    A mixin that adds the create feed post form to the context data.
+    """
+    def get_context_data(self, **kwargs):
+        kwargs = super(PostFormContextMixin, self).get_context_data(**kwargs)
+        kwargs.update({
+            'post_form': forms.FeedPostCreateForm(),
+        })
+        return kwargs
+
+
+class RewardFormContextMixin(object):
+    """
+    A mixin that adds the create feed reward form to the context data.
+    """
+    def get_context_data(self, **kwargs):
+        kwargs = super(PostFormContextMixin, self).get_context_data(**kwargs)
+        kwargs.update({
+            'reward_form': forms.FeedRewardCreateForm(),
+        })
+        return kwargs
+
+
 class LoginRedirectContextMixin(object):
     """
     A mixin that adds a link to login page with next url as
@@ -196,6 +220,7 @@ class FeedActivityContextMixin(object):
     client-side access to stream_django.
     """
     user_field = ''
+    activity_field = ''
     feed_type = None
 
     def get_context_data(self, **kwargs):
@@ -210,11 +235,24 @@ class FeedActivityContextMixin(object):
         except AttributeError:
             user = None
 
+        try:
+            activity = attrgetter(self.activity_field)(self)
+        except AttributeError:
+            activity = None
+
         if user and not user.is_anonymous:
             feed = feed_manager.get_feed(self.feed_type, user.id)
             kwargs.update({
                 'stream_api_key': settings.STREAM_API_KEY,
                 'stream_feed_id': user.id,
+                'stream_feed_type': self.feed_type,
+                'stream_feed_token': feed.get_readonly_token(),
+            })
+        elif activity:
+            feed = feed_manager.get_feed(self.feed_type, activity.id)
+            kwargs.update({
+                'stream_api_key': settings.STREAM_API_KEY,
+                'stream_feed_id': activity.id,
                 'stream_feed_type': self.feed_type,
                 'stream_feed_token': feed.get_readonly_token(),
             })

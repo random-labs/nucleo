@@ -2,7 +2,7 @@
 
 You're receiving this e-mail because a user you follow @{{ username }} offered to {{ offer_type }} {{ amount }} {{ asset }} at a price of {{ price }} XLM{% endblocktrans %}{% if memo %} for {{ memo }}{% endif %}.
 
-{{ asset_url }}
+{{ activity_url }}
 
 {% blocktrans with site_name=current_site.name site_domain=current_site.domain %}Thank you for using {{ site_name }}!
 {{ site_domain }}

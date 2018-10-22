@@ -1,10 +1,13 @@
 from allauth.account.adapter import DefaultAccountAdapter
+from allauth.utils import build_absolute_uri
 
 from django.conf import settings
 from django.core.mail import send_mass_mail
+from django.db.models import Sum
+from django.urls import reverse
 
 from . import tasks as nc_tasks
-from .models import Asset, Portfolio, Profile
+from .models import Activity, Asset, Comment, Portfolio, Profile, Reward
 from .queues import get_queue_backend
 
 
@@ -17,14 +20,134 @@ class AccountAdapter(DefaultAccountAdapter):
         """
         Add activity to user feed.
         """
-        # Queue task to add activity to user feed
         if self.request.user.is_authenticated:
+            # Create the new Activity instance for our db
+            # NOTE: instance will be updated with stream.activity_id after contact stream with adapter below.
+            inv_verb_choices = { v: k for k, v in dict(Activity.VERB_CHOICES).iteritems() }
+            created_time = context.get('time')
+            verb = inv_verb_choices.get(context.get('verb'))
+            instance = Activity.objects.create(verb=verb, user_id=self.request.user.id,
+                tx_hash=context.get('tx_hash'), created=created_time)
+
+            # Update the context to include foreign_id as instance.id
+            context['foreign_id'] = instance.id
+            context['activity_url'] = build_absolute_uri(
+                self.request,
+                reverse('nc:feed-activity-detail', kwargs={'pk': instance.id})
+            )
+
+            # Queue task to add activity to user feed
             get_queue_backend().delay(
                 nc_tasks.add_activity_to_feed,
                 feed_type=settings.STREAM_USER_FEED,
                 feed_id=self.request.user.id,
                 context=context
             )
+
+            # Return the new Activity object instance
+            return instance
+
+    def like_feed_item(self, feed_item):
+        """
+        Add a like to the item (activity or comment) in feed.
+        """
+        if self.request.user.is_authenticated:
+            # Add to list of users who have liked
+            feed_item.liked_by.add(self.request.user)
+
+            # Queue task to update likes on feed item
+            liked_by = [ u.id for u in feed_item.liked_by.all() ]
+            likes_count = feed_item.liked_by.count()
+            get_queue_backend().delay(
+                nc_tasks.update_activity_in_feed,
+                activity_id=feed_item.activity_id,
+                set={
+                    'liked_by': liked_by,
+                    'likes_count': likes_count,
+                }
+            )
+
+    def unlike_feed_item(self, feed_item):
+        """
+        Remove a like on the item (activity or comment) in feed.
+        """
+        if self.request.user.is_authenticated:
+            # Remove from list of users who have liked
+            feed_item.liked_by.remove(self.request.user)
+
+            # Queue task to update likes on feed item
+            liked_by = [ u.id for u in feed_item.liked_by.all() ]
+            likes_count = feed_item.liked_by.count()
+            get_queue_backend().delay(
+                nc_tasks.update_activity_in_feed,
+                activity_id=feed_item.activity_id,
+                set={
+                    'liked_by': liked_by,
+                    'likes_count': likes_count,
+                }
+            )
+
+    def reward_feed_item(self, feed_item, kwargs):
+        """
+        Add an reward to the item (activity or comment) in feed.
+
+        NOTE: reward creation happens elsewhere in RewardCreateForm.
+        """
+        if self.request.user.is_authenticated:
+            # Create the reward instance with the context
+            instance = Reward.objects.create(**kwargs)
+
+            # Queue task to update rewards on feed item
+            rewarded_by = [ u.id for u in feed_item.rewarded_by.all() ]
+            rewards_total = feed_item.rewards.aggregate(Sum('xlm_value'))
+            get_queue_backend().delay(
+                nc_tasks.update_activity_in_feed,
+                activity_id=feed_item.activity_id,
+                set={
+                    'rewarded_by': rewarded_by,
+                    'rewards_total': rewards_total,
+                }
+            )
+
+            # Return the new Reward object instance
+            return instance
+
+    def add_comment_to_activity(self, activity, context):
+        """
+        Add comment to an activity in user feed.
+        """
+        if self.request.user.is_authenticated:
+            # Create the new Comment instance for our db
+            # NOTE: instance will be updated with stream.activity_id after contact stream with adapter below.
+            created_time = context.get('time')
+            instance = Comment.objects.create(parent=activity,
+                user_id=self.request.user.id, created=created_time)
+
+            # Update the context to include foreign_id as instance.id
+            context['foreign_id'] = instance.id
+
+            # Queue task to add comment to activity feed
+            get_queue_backend().delay(
+                nc_tasks.add_activity_to_feed,
+                feed_type=settings.STREAM_ACTIVITY_FEED,
+                feed_id=activity.id,
+                context=context
+            )
+
+            # Queue task to update comments on activity within user feed
+            commented_by = [ u.id for u in activity.commented_by.all() ]
+            comments_count = activity.commented_by.count()
+            get_queue_backend().delay(
+                nc_tasks.update_activity_in_feed,
+                activity_id=activity.activity_id,
+                set={
+                    'commented_by': commented_by,
+                    'comments_count': comments_count,
+                }
+            )
+
+            # Return the new Comment object instance
+            return instance
 
     def follow_own_feed(self, user):
         """

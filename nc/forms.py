@@ -1,4 +1,4 @@
-import base64, dateutil.parser, requests
+import base64, datetime, dateutil.parser, requests
 
 from allauth.account import forms as allauth_account_forms
 from allauth.account.adapter import get_adapter
@@ -15,6 +15,7 @@ from django.contrib.sites.shortcuts import get_current_site
 from django.core import signing
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 
 from stellar_base.address import Address
@@ -28,7 +29,9 @@ from stellar_base.utils import AccountNotExistError
 
 from stream_django.feed_manager import feed_manager
 
-from .models import Account, Asset, Profile, AccountFundRequest
+from .models import (
+    Account, AccountFundRequest, Activity, Asset, Comment, Profile, Reward
+)
 
 
 # Allauth
@@ -141,10 +144,36 @@ class ProfilePrivacySettingsUpdateForm(forms.ModelForm):
         }
 
 
+class ProfileRewardSettingsUpdateForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        """
+        Override __init__ to filter on profile.user.
+        """
+        # Call the super
+        super(ProfileRewardSettingsUpdateForm, self).__init__(*args, **kwargs)
+
+        # Filter the allowed accounts for reward default
+        self.fields['default_reward_account'].queryset = Account.objects\
+            .filter(user=self.instance.user)
+
+    class Meta:
+        model = Profile
+        fields = [ 'default_reward_account', 'default_xlm_reward_amount' ]
+        labels = {
+            'default_reward_account': _('Default reward account'),
+            'default_xlm_reward_amount': _('Default reward amount in XLM'),
+        }
+        help_texts = {
+            'default_reward_account': _("This is the Stellar account where you'll receive lumens for rewards on your posts."),
+            'default_xlm_reward_amount': _("The default amount of lumens you'd like to give each time you reward others for their posts."),
+        }
+
+
 class ProfileSettingsUpdateMultiForm(multiform.MultiModelForm):
     form_classes = {
         'email': ProfileEmailSettingsUpdateForm,
         'privacy': ProfilePrivacySettingsUpdateForm,
+        'reward': ProfileRewardSettingsUpdateForm,
     }
 
 
@@ -418,6 +447,10 @@ class AssetUpdateForm(forms.ModelForm):
 class FeedActivityCreateForm(forms.Form):
     """
     Form to add new activity to request.user's feed.
+
+    NOTE: This is for Stellar transactions only! See
+    FeedPostCreateForm/FeedCommentCreateForm for adding posts/comments
+    to activity feeds.
     """
     tx_hash = forms.CharField(max_length=64)
 
@@ -481,6 +514,10 @@ class FeedActivityCreateForm(forms.Form):
             4. Buy/sell of asset (verb: offer)
             5. Follow user (verb: follow; not handled by this form but
                 instead in UserFollowUpdateView)
+            6. Posts to feed (verb: post; not handled by this form but
+                instead in FeedPostCreateForm)
+            7. Comments on a post in feed (verb: comment; not handled by this form but
+                instead in FeedCommentCreateForm)
 
         For verb = 'follow', 'send' should trigger email(s)/notif(s) to only
         recipient of the action. For verb = 'issue', 'offer' send email(s)/notif(s)
@@ -490,7 +527,7 @@ class FeedActivityCreateForm(forms.Form):
             # TODO: This is a band-aid for times when tx_ops call gives a 404,
             # which seems to happen most often on offers (settlement time?).
             # Get rid of this once implement a transaction_operations nodejs listener?
-            return { 'success_url': self.success_url }
+            return { 'success_url': self.success_url, 'instance': None }
 
         # Determine activity type and update kwargs for stream call
         request_user_profile = self.request_user.profile
@@ -503,7 +540,7 @@ class FeedActivityCreateForm(forms.Form):
             'actor_href': request_user_profile.href(),
             'tx_hash': self.cleaned_data.get("tx_hash"),
             'tx_href': self.tx_href,
-            'foreign_id': tx_hash,
+            'message': self.memo,
             'memo': self.memo,
             'time': self.time,
         }
@@ -511,6 +548,7 @@ class FeedActivityCreateForm(forms.Form):
 
         # Payment
         if len(self.ops) == 1 and self.ops[0]['type_i'] == Xdr.const.PAYMENT:
+            verb = 'send'
             record = self.ops[0]
 
             # Get the user associated with to account if registered in our db
@@ -550,12 +588,17 @@ class FeedActivityCreateForm(forms.Form):
                 'object_href': object_href
             })
 
+            # Add activity to user's feed
+            instance = self.adapter.add_activity(kwargs)
+
             # Send an email to user receiving funds
             if object_email and object_profile and object_profile.allow_payment_email:
                 object_account = object.accounts.get(public_key=record['to'])
                 asset_display = record['asset_code'] if record['asset_type'] != 'native' else 'XLM'
                 profile_path = reverse('nc:user-detail', kwargs={'slug': object_username})
                 profile_url = build_absolute_uri(self.request, profile_path)
+                activity_path = reverse('nc:feed-activity-detail', kwargs={'pk': instance.id})
+                activity_url = build_absolute_uri(self.request, activity_path)
                 email_settings_path = reverse('nc:user-settings-redirect')
                 email_settings_url = build_absolute_uri(self.request, email_settings_path)
                 ctx_email = {
@@ -567,6 +610,7 @@ class FeedActivityCreateForm(forms.Form):
                     'account_name': object_account.name,
                     'account_public_key': object_account.public_key,
                     'profile_url': profile_url,
+                    'activity_url': activity_url,
                     'email_settings_url': email_settings_url,
                 }
                 self.adapter.send_mail('nc/email/feed_activity_send',
@@ -577,6 +621,7 @@ class FeedActivityCreateForm(forms.Form):
             and self.ops[1]['type_i'] == Xdr.const.PAYMENT\
             and self.ops[0]['asset_code'] == self.ops[1]['asset_code']\
             and self.ops[0]['asset_issuer'] == self.ops[1]['asset_issuer']:
+            verb = 'issue'
             payment_record = self.ops[1]
 
             # Get account for issuer and either retrieve or create new asset in our db
@@ -599,11 +644,16 @@ class FeedActivityCreateForm(forms.Form):
                 'object_href': asset.href()
             })
 
+            # Add activity to user's feed
+            instance = self.adapter.add_activity(kwargs)
+
             # Send a bulk email to all followers that a new token has been issued
             recipient_list = [ u.email for u in request_user_profile.followers\
                 .filter(profile__allow_token_issuance_email=True) ]
             asset_path = reverse('nc:asset-detail', kwargs={'slug': asset.asset_id})
             asset_url = build_absolute_uri(self.request, asset_path)
+            activity_path = reverse('nc:feed-activity-detail', kwargs={'pk': instance.id})
+            activity_url = build_absolute_uri(self.request, activity_path)
             email_settings_path = reverse('nc:user-settings-redirect')
             email_settings_url = build_absolute_uri(self.request, email_settings_path)
             ctx_email = {
@@ -614,6 +664,7 @@ class FeedActivityCreateForm(forms.Form):
                 'asset_url': asset_url,
                 'account_name': issuer.name,
                 'account_public_key': issuer.public_key,
+                'activity_url': activity_url,
                 'email_settings_url': email_settings_url,
             }
             self.adapter.send_mail_to_many('nc/email/feed_activity_issue',
@@ -621,6 +672,7 @@ class FeedActivityCreateForm(forms.Form):
 
         # Trusting of asset
         elif len(self.ops) == 1 and self.ops[0]['type_i'] == Xdr.const.CHANGE_TRUST:
+            verb = 'trust'
             record = self.ops[0]
 
             # Get account for issuer and either retrieve or create new asset in our db
@@ -642,7 +694,7 @@ class FeedActivityCreateForm(forms.Form):
                 self.account.assets_trusting.remove(asset)
                 if not self.request_user.accounts.filter(assets_trusting=asset).exists():
                     self.request_user.assets_trusting.remove(asset)
-                return { 'success_url': self.success_url }
+                return { 'success_url': self.success_url, 'instance': None }
             else:
                 # Adding trust, so add activity and add to user's asset trusting list.
                 self.account.assets_trusting.add(asset)
@@ -659,6 +711,9 @@ class FeedActivityCreateForm(forms.Form):
                     'object_href': asset.href()
                 })
 
+                # Add activity to user's feed
+                instance = self.adapter.add_activity(kwargs)
+
                 # Send an email to issuer of asset
                 asset_issuer_account = asset.issuer
                 asset_issuer_user = asset.issuer.user if asset_issuer_account else None
@@ -667,6 +722,8 @@ class FeedActivityCreateForm(forms.Form):
                     asset_display = record['asset_code']
                     profile_path = reverse('nc:user-detail', kwargs={'slug': self.request_user.username})
                     profile_url = build_absolute_uri(self.request, profile_path)
+                    activity_path = reverse('nc:feed-activity-detail', kwargs={'pk': instance.id})
+                    activity_url = build_absolute_uri(self.request, activity_path)
                     email_settings_path = reverse('nc:user-settings-redirect')
                     email_settings_url = build_absolute_uri(self.request, email_settings_path)
                     ctx_email = {
@@ -676,6 +733,7 @@ class FeedActivityCreateForm(forms.Form):
                         'account_name': asset_issuer_account.name,
                         'account_public_key': asset_issuer_account.public_key,
                         'profile_url': profile_url,
+                        'activity_url': activity_url,
                         'email_settings_url': email_settings_url,
                     }
                     self.adapter.send_mail('nc/email/feed_activity_trust',
@@ -683,6 +741,7 @@ class FeedActivityCreateForm(forms.Form):
 
         # Buy/sell of asset
         elif len(self.ops) == 1 and self.ops[0]['type_i'] == Xdr.const.MANAGE_OFFER:
+            verb = 'offer'
             record = self.ops[0]
 
             # Given we only allow buying/selling of token with respect to XLM,
@@ -710,6 +769,9 @@ class FeedActivityCreateForm(forms.Form):
                 'object_href': asset.href()
             })
 
+            # Add activity to user's feed
+            instance = self.adapter.add_activity(kwargs)
+
             # Send a bulk email to all followers that user has made a trade
             recipient_list = [ u.email for u in request_user_profile.followers\
                 .filter(profile__allow_trade_email=True) ]
@@ -718,6 +780,8 @@ class FeedActivityCreateForm(forms.Form):
             price_display = str(round(1/float(record['price']), 7)) if offer_type == 'buying' else record['price']
             asset_path = reverse('nc:asset-detail', kwargs={'slug': asset.asset_id})
             asset_url = build_absolute_uri(self.request, asset_path)
+            activity_path = reverse('nc:feed-activity-detail', kwargs={'pk': instance.id})
+            activity_url = build_absolute_uri(self.request, activity_path)
             email_settings_path = reverse('nc:user-settings-redirect')
             email_settings_url = build_absolute_uri(self.request, email_settings_path)
             ctx_email = {
@@ -729,6 +793,7 @@ class FeedActivityCreateForm(forms.Form):
                 'price': price_display,
                 'asset': asset.code,
                 'asset_url': asset_url,
+                'activity_url': activity_url,
                 'email_settings_url': email_settings_url,
             }
             self.adapter.send_mail_to_many('nc/email/feed_activity_offer',
@@ -740,13 +805,260 @@ class FeedActivityCreateForm(forms.Form):
 
         else:
             # Not a supported activity type
-            return { 'success_url': self.success_url }
-
-
-        # Add activity to user's feed
-        self.adapter.add_activity(kwargs)
+            return { 'success_url': self.success_url, 'instance': None }
 
         # Return object with success url
-        return {
-            'success_url': self.success_url,
+        return { 'success_url': self.success_url, 'instance': instance }
+
+
+class FeedPostCreateForm(forms.Form):
+    """
+    Form to add new post to activity to request.user's feed.
+    """
+    message = forms.CharField(max_length=255)
+
+    def __init__(self, *args, **kwargs):
+        """
+        Override __init__ to store authenticated user
+        """
+        self.request = kwargs.pop('request', None)
+        self.request_user = self.request.user if self.request else None
+        self.success_url = kwargs.pop('success_url', None)
+        super(FeedPostCreateForm, self).__init__(*args, **kwargs)
+
+    def save(self):
+        """
+        Add new post activity to request_user
+        stream feed.
+
+        verb = 'post'.
+        """
+        # Some initialization of items will need
+        self.adapter = get_adapter(self.request)
+        request_user_profile = self.request_user.profile
+        current_site = get_current_site(self.request)
+        message = self.cleaned_data.get('message', '')
+        verb = 'post'
+
+        # Update kwargs for stream call
+        kwargs = {
+            'actor': self.request_user.id,
+            'actor_username': self.request_user.username,
+            'actor_pic_url': request_user_profile.pic_url(),
+            'actor_href': request_user_profile.href(),
+            'verb': 'post',
+            'object': self.request_user.id,
+            'message': message,
+            'memo': message,
+            'time': timezone.now(),
         }
+
+        # Add activity to user's feed
+        instance = self.adapter.add_activity(kwargs)
+
+        # Send a bulk email out to all followers that user has posted
+        # TODO: separate out into mentions and just full on post
+        recipient_list = [ u.email for u in request_user_profile.followers\
+            .filter(profile__allow_post_email=True) ]
+        activity_path = reverse('nc:feed-activity-detail', kwargs={'pk': instance.id})
+        activity_url = build_absolute_uri(self.request, activity_path)
+        email_settings_path = reverse('nc:user-settings-redirect')
+        email_settings_url = build_absolute_uri(self.request, email_settings_path)
+        ctx_email = {
+            'current_site': current_site,
+            'username': self.request_user.username,
+            'memo': message,
+            'message': message,
+            'activity_url': activity_url,
+            'email_settings_url': email_settings_url,
+        }
+        self.adapter.send_mail_to_many('nc/email/feed_activity_post',
+            recipient_list, ctx_email)
+
+        # Return object with success url
+        return { 'success_url': self.success_url, 'instance': instance }
+
+
+class FeedCommentUpdateForm(forms.Form):
+    """
+    Form to add new comment to an activity.
+    """
+    message = forms.CharField(max_length=255)
+
+    def __init__(self, *args, **kwargs):
+        """
+        Override __init__ to store authenticated user
+        """
+        self.request = kwargs.pop('request', None)
+        self.request_user = self.request.user if self.request else None
+        self.activity = kwargs.pop('activity', None)
+        self.success_url = kwargs.pop('success_url', None)
+        super(FeedCommentUpdateForm, self).__init__(*args, **kwargs)
+
+    def save(self):
+        """
+        Add new comment to feed of request.user activity item.
+
+        verb = 'comment'.
+        """
+        # Some initialization of items will need
+        self.adapter = get_adapter(self.request)
+        activity_user = self.activity.user
+        request_user_profile = self.request_user.profile
+        current_site = get_current_site(self.request)
+        message = self.cleaned_data.get('message', '')
+        verb = 'comment'
+
+        # Update kwargs for stream call
+        kwargs = {
+            'actor': self.request_user.id,
+            'actor_username': self.request_user.username,
+            'actor_pic_url': request_user_profile.pic_url(),
+            'actor_href': request_user_profile.href(),
+            'verb': 'comment',
+            'object': self.activity.id,
+            'message': message,
+            'memo': message,
+            'time': timezone.now(),
+        }
+
+        # Add comment to activity's feed
+        instance = self.adapter.add_comment_to_activity(self.activity, kwargs)
+
+        # Send bulk emails out to activity poster and any other commenters on activity item
+        # that user has commented further on activity
+        # TODO: separate out into mentions and just full on post
+        recipient_list = [ u.email for u in self.activity.commented_by\
+            .filter(profile__allow_comment_email=True).exclude(id=self.request_user.id) ]
+        if activity_user != self.request_user:
+            recipient_list.append(activity_user.email)
+        activity_path = reverse('nc:feed-activity-detail', kwargs={'pk': self.activity.id})
+        activity_url = build_absolute_uri(self.request, activity_path)
+        email_settings_path = reverse('nc:user-settings-redirect')
+        email_settings_url = build_absolute_uri(self.request, email_settings_path)
+        ctx_email = {
+            'current_site': current_site,
+            'username': self.request_user.username,
+            'memo': message,
+            'message': message,
+            'activity_url': activity_url,
+            'email_settings_url': email_settings_url,
+        }
+        self.adapter.send_mail_to_many('nc/email/feed_activity_comment',
+            recipient_list, ctx_email)
+
+        # Return object with success url
+        return { 'success_url': self.success_url, 'instance': instance }
+
+
+class FeedRewardCreateForm(forms.Form):
+    """
+    Form to add new reward to given feed item from request.user.
+
+    Pass in tx hash of successful reward and stream activity id of the feed
+    item request.user rewarded.
+    """
+    # TODO: Add in default account to receive rewards for each user!! This needs
+    # to be in the activity feed data
+    tx_hash = forms.CharField(max_length=64)
+    activity_id = forms.CharField(max_length=36)
+    feed_type = forms.ChoiceField(choices=[
+        (settings.STREAM_TIMELINE_FEED, settings.STREAM_TIMELINE_FEED.title()),
+        (settings.STREAM_ACTIVITY_FEED, settings.STREAM_ACTIVITY_FEED.title())
+    ])
+
+    def __init__(self, *args, **kwargs):
+        """
+        Override __init__ to store authenticated user
+        """
+        self.request = kwargs.pop('request', None)
+        self.request_user = self.request.user if self.request else None
+        self.success_url = kwargs.pop('success_url', None)
+        super(FeedRewardCreateForm, self).__init__(*args, **kwargs)
+
+    def clean(self):
+        """
+        Override to obtain transaction details from given tx_hash.
+        """
+        # Call the super
+        super(FeedRewardCreateForm, self).clean()
+
+        # Obtain form input parameter
+        tx_hash = self.cleaned_data.get("tx_hash")
+        activity_id = self.cleaned_data.get("activity_id")
+        feed_type = self.cleaned_data.get("feed_type")
+
+        # Get the feed item being rewarded
+        if feed_type == settings.STREAM_TIMELINE_FEED:
+            self.model_cls = Activity
+        elif feed_type == settings.STREAM_ACTIVITY_FEED:
+            self.model_cls = Comment
+        else:
+            raise ValidationError(_('Invalid feed type.'), code='invalid_feed_type')
+
+        # Get the feed item by activity_id
+        try:
+            self.feed_item = self.model_cls.objects.get(activity_id=activity_id)
+        except ObjectDoesNotExist:
+            raise ValidationError(_('Invalid activity id. No feed item exists for that id and feed type combination.'), code='invalid_activity_id')
+
+        # Make calls to Horizon to get tx and all ops associated with given tx hash
+        horizon = settings.STELLAR_HORIZON_INITIALIZATION_METHOD()
+        tx_json = horizon.transaction(tx_hash=tx_hash)
+        ops_json = horizon.transaction_operations(tx_hash=tx_hash)
+
+        # Validate memo type
+        if 'memo' not in tx_json or tx_json['memo_type'] != 'hash':
+            raise ValidationError(_('Invalid memo type. Memo must be of type hash.'), code='invalid_memo_type')
+
+        # Store the memo if there and verify memo hash matches that generated by feed item
+        self.memo = tx_json['memo']
+        if self.feed_item.generate_reward_memo_hash(self.request) != self.memo:
+            raise ValidationError(_('Invalid memo hash. Hashed value does not match data for these reward details.'), code='invalid_memo_hash')
+
+        # Store the ops for save method and verify source account
+        self.ops = ops_json['_embedded']['records'] if '_embedded' in ops_json and 'records' in ops_json['_embedded'] else None
+
+        # Store the time created and check current user has added account associated with tx
+        if self.ops:
+            first_op = self.ops[0]
+            self.time = dateutil.parser.parse(first_op['created_at'])
+            self.tx_href = first_op['_links']['transaction']['href'] if '_links' in first_op and 'transaction' in first_op['_links'] and 'href' in first_op['_links']['transaction'] else None
+
+            if first_op['type_i'] != Xdr.const.PAYMENT:
+                raise ValidationError(_('Invalid operation type. Operation associated with reward transaction must be a payment.'), code='invalid_operation')
+
+            try:
+                sender = self.request_user.accounts.get(public_key=first_op['from'])
+            except ObjectDoesNotExist:
+                raise ValidationError(_('Invalid user id. Decoded account associated with Stellar transaction does not match from user id.'), code='invalid_user')
+
+            try:
+                receiver = self.feed_item.user.accounts.get(public_key=first_op['to'])
+            except ObjectDoesNotExist:
+                raise ValidationError(_('Invalid user id. Decoded account associated with Stellar transaction does not match to user id.'), code='invalid_user')
+
+        return self.cleaned_data
+
+    def save(self):
+        """
+        Call get_adapter(request).reward_feed_item().
+        """
+        if not self.ops:
+            # TODO: This is a band-aid for times when tx_ops call gives a 404,
+            # which seems to happen most often on offers (settlement time?).
+            # Get rid of this once implement a transaction_operations nodejs listener?
+            return None
+
+        # Setup the kwargs for Reward instance creation
+        kwargs = {
+            'xlm_value': float(self.ops[0]['amount']),
+            'tx_hash': self.tx_hash,
+            'user': self.request_user,
+            self.model_cls.__name__.lower(): self.feed_item
+        }
+
+        # Then update feed item in stream feed
+        instance = get_adapter(self.request).reward_feed_item(self.feed_item, kwargs)
+
+        return instance

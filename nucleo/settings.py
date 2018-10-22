@@ -93,6 +93,7 @@ INSTALLED_APPS = [
     'stream_django',
     'timeseries',
     'django_celery_results',
+    'mathfilters',
 ]
 
 MIDDLEWARE = [
@@ -169,7 +170,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # Auth
 LOGIN_URL = '/accounts/login/'
-LOGIN_REDIRECT_URL = '/leaderboard/'
+LOGIN_REDIRECT_URL = '/feed/activity/'
 SIGNUP_REDIRECT_URL = '/accounts/signup/profile/update/'
 AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',
@@ -382,6 +383,7 @@ STREAM_API_KEY = os.environ.get('STREAM_API_KEY')
 STREAM_API_SECRET = os.environ.get('STREAM_API_SECRET')
 STREAM_USER_FEED = 'user'
 STREAM_TIMELINE_FEED = 'timeline'
+STREAM_ACTIVITY_FEED = 'activity'
 
 # reCAPTCHA
 GOOGLE_RECAPTCHA_SITE_KEY = os.environ.get('GOOGLE_RECAPTCHA_SITE_KEY')

@@ -58,6 +58,10 @@
         {% endif %}
         {% endwith %}
         <div class="dropdown-divider"></div>
+        <a class="dropdown-item" href="{% url 'nc:feed-redirect' %}">
+          <span data-feather="activity"></span>
+          Activity
+        </a>
         <a class="dropdown-item" href="{% url 'nc:leaderboard-redirect' %}">
           <span data-feather="award"></span>
           Leaderboard
@@ -65,10 +69,6 @@
         <a class="dropdown-item" href="{% url 'nc:trade-redirect' %}">
           <span data-feather="trending-up"></span>
           Trade
-        </a>
-        <a class="dropdown-item" href="{% url 'nc:feed-redirect' %}">
-          <span data-feather="activity"></span>
-          Activity
         </a>
         <a class="dropdown-item" href="{% url 'nc:send-redirect' %}">
           <span data-feather="send"></span>
@@ -114,6 +114,12 @@
         <div class="">
           <ul class="nav flex-row">
             <li class="nav-item">
+              <a {% if view_type == 'feed' %}class="nav-link active"{% else %}class="nav-link"{% endif %} href="{% url 'nc:feed-redirect' %}">
+                <span data-feather="activity"></span>
+                <span class="d-none d-md-inline-block">Activity{% if view_type == 'feed' %} <span class="sr-only">(current)</span>{% endif %}</span>
+              </a>
+            </li>
+            <li class="nav-item">
               <a {% if view_type == 'leaderboard' %}class="nav-link active"{% else %}class="nav-link"{% endif %} href="{% url 'nc:leaderboard-redirect' %}">
                 <span data-feather="award"></span>
                 <span class="d-none d-md-inline-block">Leaderboard{% if view_type == 'leaderboard' %} <span class="sr-only">(current)</span>{% endif %}</span>
@@ -123,12 +129,6 @@
               <a {% if view_type == 'asset' %}class="nav-link active"{% else %}class="nav-link"{% endif %} href="{% url 'nc:trade-redirect' %}">
                 <span data-feather="trending-up"></span>
                 <span class="d-none d-md-inline-block">Trade{% if view_type == 'asset' %} <span class="sr-only">(current)</span>{% endif %}</span>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a {% if view_type == 'feed' %}class="nav-link active"{% else %}class="nav-link"{% endif %} href="{% url 'nc:feed-redirect' %}">
-                <span data-feather="activity"></span>
-                <span class="d-none d-md-inline-block">Activity{% if view_type == 'feed' %} <span class="sr-only">(current)</span>{% endif %}</span>
               </a>
             </li>
             <li class="nav-item">

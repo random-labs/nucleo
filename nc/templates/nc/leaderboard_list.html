@@ -140,19 +140,17 @@
   </form>
 </div>
 
-<!-- TODO:
 <div class="mb-4">
-  <form method="POST" action="">
+  <form method="POST" id="postForm" action="{% url 'nc:feed-post-create' %}" data-success="{% url 'nc:feed-redirect' %}">
     {% csrf_token %}
     <div class="input-group">
-      <input class="form-control form-control-lg" type="text" placeholder="What crypto's on your mind?">
+      <input class="form-control form-control-lg" type="text" name="message" maxlength="255" placeholder="What crypto's on your mind?" required>
       <div class="input-group-append">
-        <button type="submit" class="btn btn-sm btn-primary"><span data-feather="edit-2"></span></button>
+        <button type="submit" class="btn btn-sm btn-primary ladda-button" data-style="expand-left" data-size="xs"><span class="ladda-label"><span data-feather="edit-2"></span></span></button>
       </div>
     </div>
   </form>
 </div>
--->
 
 {% if request.user.follower_requests.count > 0 %}
 <div class="card card-requests mb-4">
@@ -192,6 +190,11 @@
   <div class="card-body p-0 m-0">
     <ul class="nav nav-pills nav-justified">
       <li class="nav-item">
+        <a title="Feed" class="nav-link btn-outline-info rounded-0 rounded-right" href="{% url 'nc:feed-redirect' %}">
+          <span data-feather="activity"></span>
+        </a>
+      </li>
+      <li class="nav-item">
         <a title="Leaderboard" class="nav-link btn-outline-warning rounded-0 rounded-left active" href="{% url 'nc:leaderboard-redirect' %}">
           <span data-feather="award"></span>
         </a>
@@ -199,11 +202,6 @@
       <li class="nav-item">
         <a title="Trade" class="nav-link btn-outline-success rounded-0" href="{% url 'nc:trade-redirect' %}">
           <span data-feather="trending-up"></span>
-        </a>
-      </li>
-      <li class="nav-item">
-        <a title="Feed" class="nav-link btn-outline-info rounded-0 rounded-right" href="{% url 'nc:feed-redirect' %}">
-          <span data-feather="activity"></span>
         </a>
       </li>
     </ul>
@@ -326,6 +324,19 @@
           {% endfor %}
         ];
 </script>
+<script>
+  const CURRENT_USER_ID = {% if request.user.is_authenticated %}{{ request.user.id }}{% else %}null{% endif %};
+</script>
+<script>
+  const STREAM_API_KEY = "{{ stream_api_key }}",
+        STREAM_FEED_TYPE = "{{ stream_feed_type }}",
+        STREAM_FEED_ID = "{{ stream_feed_id }}",
+        STREAM_FEED_TOKEN = "{{ stream_feed_token }}",
+        STREAM_FEED_LISTEN = false,
+        STREAM_FEED_LIMIT = 25;
+</script>
+<script src="{% static 'getstream/js/getstream.min.js' %}"></script>
+<script src="{% static 'nc/scripts/feed_activity.js' %}"></script>
 <script>
   const PAPAYA_API_DEPOSIT_URL = "{{ papaya_api_deposit_url }}",
         PAPAYA_ASSET_TRUST_LINKS = {

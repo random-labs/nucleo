@@ -27,6 +27,8 @@
       // Only load more if records left
       var activityListQuery = $(button.dataset.parent);
 
+      // TODO: implement ascending/descending order for diff between activity and comment section
+
       // Set up ops for get call
       var ops = { limit: STREAM_FEED_LIMIT };
       if (button.dataset.id_lt) {
@@ -80,14 +82,16 @@
     //       <a href=""><img class="img-object-fit-cover img-thumbnail rounded-circle position-absolute" style="height: 40px; width: 40px; top: -15px; left: -15px;" src="{% static 'nc/images/rocket.png' %}" alt=""></a>
     //     </div>
     //     <div class="d-flex flex-column align-items-start mx-3">
-    //       <span><a href="" class="text-dark font-weight-bold">@mikey.rf</a> sent 0.75 <a href="" class="text-dark font-weight-bold">XLM</a> to <a href="" class="text-dark font-weight-bold">@feld27</a></span>
-    //       <h4>Memo!</h4>
-    //       <div><small class="text-muted">15 days ago</small></div>
-    //       <div><small>Tx #: <a href="https://horizon-testnet.stellar.org/transactions/bfaf2287695c651747e635ca7e03698ba44611ed9a6b919bd1db9727a0b6dfda" class="text-info" title="Stellar Transaction Hash" target="_blank">bfaf221...0b6dfda</a></small></div>
-    //       <div class="d-flex flex-row">
-    //        <span data-feather="heart"></span>
-    //        <span data-feather="message-circle"></span>
-    //        <span data-feather="award"></span>
+    //       <a href="" class="d-flex flex-column align-items-start list-group-item list-group-item-action">
+    //        <span><a href="" class="text-dark font-weight-bold">@mikey.rf</a> sent 0.75 <a href="" class="text-dark font-weight-bold">XLM</a> to <a href="" class="text-dark font-weight-bold">@feld27</a></span>
+    //        <div class="h3 pt-2">Memo!</div>
+    //        <div><small class="text-muted">15 days ago</small></div>
+    //        <div><small>Tx #: <a href="https://horizon-testnet.stellar.org/transactions/bfaf2287695c651747e635ca7e03698ba44611ed9a6b919bd1db9727a0b6dfda" class="text-info" title="Stellar Transaction Hash" target="_blank">bfaf221...0b6dfda</a></small></div>
+    //       </a>
+    //       <div class="d-flex flex-row justify-content-start mt-2">
+    //        <div class="pr-4"><button class="btn btn-link text-danger p-0" data-activity_id="a8ad2b80-ca6c-11e8-8080-8001503994dc"><span data-feather="heart"></span><small class="pl-1">2</small></button></div>
+    //        <div class="pr-4"><button class="btn btn-link text-dark p-0" data-activity_id="a8ad2b80-ca6c-11e8-8080-8001503994dc" data-toggle="modal" data-target="#rewardActivityModal"><span data-feather="award"></span><small class="pl-1">100</small></button></div>
+    //        <div class="pr-4"><a href="" class="btn btn-link text-dark p-0"><span data-feather="message-circle"></span><small class="pl-1">7</small></button></div>
     //       </div>
     //     </div>
     //   </div>
@@ -97,6 +101,7 @@
     // Build the full DOM li list item object
     var li = document.createElement("li");
     li.setAttribute("class", "list-group-item d-flex justify-content-between p-4");
+    li.setAttribute("data-id", record.id);
 
     var contentDiv = document.createElement("div");
     contentDiv.setAttribute("class", "d-flex align-content-start");
@@ -121,42 +126,51 @@
     picContentDiv.append(actorPicA);
     contentDiv.append(picContentDiv);
 
-    let otherHrefAttribute = (record.verb == 'send' ? 'asset_href' : 'object_href'),
-        otherPicUrlAttribute = (record.verb == 'send' ? 'asset_pic_url' : 'object_pic_url'),
-        otherHasHref = otherHrefAttribute in record,
-        otherHasPicUrl = otherPicUrlAttribute in record;
+    if (record.verb != 'post' && record.verb != 'comment') {
+      let otherHrefAttribute = (record.verb == 'send' ? 'asset_href' : 'object_href'),
+          otherPicUrlAttribute = (record.verb == 'send' ? 'asset_pic_url' : 'object_pic_url'),
+          otherHasHref = otherHrefAttribute in record,
+          otherHasPicUrl = otherPicUrlAttribute in record;
 
-    var otherPicA = document.createElement("a");
-    // Check whether object/asset has been registered in Nucleo db
-    if (otherHasHref) {
-      otherPicA.setAttribute("href", record[otherHrefAttribute]);
-    }
+      var otherPicA = document.createElement("a");
+      // Check whether object/asset has been registered in Nucleo db
+      if (otherHasHref) {
+        otherPicA.setAttribute("href", record[otherHrefAttribute]);
+      }
 
-    var otherPicImg = document.createElement("img");
-    if (record.verb == 'follow') {
-      otherPicImg.setAttribute("class", "img-object-fit-cover img-thumbnail rounded position-absolute");
-    } else {
-      otherPicImg.setAttribute("class", "img-object-fit-cover img-thumbnail rounded-circle position-absolute");
+      var otherPicImg = document.createElement("img");
+      if (record.verb == 'follow') {
+        otherPicImg.setAttribute("class", "img-object-fit-cover img-thumbnail rounded position-absolute");
+      } else {
+        otherPicImg.setAttribute("class", "img-object-fit-cover img-thumbnail rounded-circle position-absolute");
+      }
+      otherPicImg.style.height = "40px";
+      otherPicImg.style.width = "40px";
+      otherPicImg.style.top = "-15px";
+      otherPicImg.style.left = "-15px";
+      if (otherHasPicUrl) {
+        otherPicImg.setAttribute("src", record[otherPicUrlAttribute]);
+      }
+      otherPicA.append(otherPicImg);
+      picContentDiv.append(otherPicA);
     }
-    otherPicImg.style.height = "40px";
-    otherPicImg.style.width = "40px";
-    otherPicImg.style.top = "-15px";
-    otherPicImg.style.left = "-15px";
-    if (otherHasPicUrl) {
-      otherPicImg.setAttribute("src", record[otherPicUrlAttribute]);
-    }
-    otherPicA.append(otherPicImg);
-    picContentDiv.append(otherPicA);
     contentDiv.append(picContentDiv);
 
     // Description container for all the relevant
     // activity details
-    var descriptionContentDiv = document.createElement("div");
+    var descriptionContentDiv = document.createElement("div"),
+        descriptionContentA = document.createElement("a");
     descriptionContentDiv.setAttribute("class", "d-flex flex-column align-items-start mx-3");
+    descriptionContentA.setAttribute("class", "d-flex flex-column align-items-start list-group-item list-group-item-action p-0 m-0 border-0");
+    if (record.activity_url) {
+      descriptionContentA.setAttribute("href", record.activity_url);
+    }
+    descriptionContentDiv.append(descriptionContentA);
+    contentDiv.append(descriptionContentDiv);
 
     var descriptionSpan = document.createElement("span"),
         memoDiv = document.createElement("div"),
-        memoContent = (record.memo ? record.memo : ""),
+        memoContent = ((record.memo || record.message) ? (record.memo ? record.memo : record.message) : ""),
         memoText = document.createTextNode(memoContent),
         timeSinceDiv = document.createElement("div"),
         timeSinceSmall = document.createElement("small"),
@@ -164,26 +178,33 @@
         timeSinceText = document.createTextNode(timeSince),
         actionsDiv = document.createElement("div"),
         actionLikeContainer = document.createElement("div"),
-        actionAwardContainer = document.createElement("div"),
+        actionRewardContainer = document.createElement("div"),
         actionCommentContainer = document.createElement("div"),
         actionLikeButton = document.createElement("button"),
-        actionAwardButton = document.createElement("button"),
-        actionCommentButton = document.createElement("button"),
+        actionRewardButton = document.createElement("button"),
+        actionCommentButton = document.createElement("a"),
         actionLikeIconSpan = document.createElement("span"),
-        actionAwardIconSpan = document.createElement("span"),
+        actionRewardIconSpan = document.createElement("span"),
         actionCommentIconSpan = document.createElement("span"),
         actionLikeSmall = document.createElement("small"),
-        actionAwardSmall = document.createElement("small"),
+        actionRewardSmall = document.createElement("small"),
         actionCommentSmall = document.createElement("small"),
-        actionLikeText = document.createTextNode(""), // TODO: Add in counts for like, comment, award
-        actionAwardText = document.createTextNode(""),
-        actionCommentText = document.createTextNode("");
+        actionLikeContent = (record.likes_count && record.likes_count > 0 ? record.likes_count : ""),
+        actionRewardContent = (record.rewards_total && record.rewards_total > 0 ? record.rewards_total : ""),
+        actionCommentContent = (record.comments_count && record.comments_count > 0 ? record.comments_count : ""),
+        actionLikeText = document.createTextNode(actionLikeContent),
+        actionRewardText = document.createTextNode(actionRewardContent),
+        actionCommentText = document.createTextNode(actionCommentContent);
 
     // Description span in description container
     descriptionSpan.setAttribute("style", "font-size: 0.9em")
 
     // Memo div in description container
-    memoDiv.setAttribute("class", "h3 pt-2")
+    if (record.verb != 'comment') {
+      memoDiv.setAttribute("class", "h3 pt-2 text-dark");
+    } else {
+      memoDiv.setAttribute("class", "h5 pt-2 text-dark");
+    }
     memoDiv.appendChild(memoText);
 
     // Timesince div in description container
@@ -191,15 +212,14 @@
     timeSinceSmall.appendChild(timeSinceText);
     timeSinceDiv.appendChild(timeSinceSmall);
 
-    // Append description, memo, and time since to outer description container
-    descriptionContentDiv.append(descriptionSpan);
-    descriptionContentDiv.append(memoDiv);
-    descriptionContentDiv.append(timeSinceDiv);
-    contentDiv.append(descriptionContentDiv);
+    // Append description, memo, and time since to outer description <a>
+    descriptionContentA.append(descriptionSpan);
+    descriptionContentA.append(memoDiv);
+    descriptionContentA.append(timeSinceDiv);
 
     // Tx hash div in description container
-    if (record.foreign_id || record.tx_hash) {
-      let recordTxHash = (record.foreign_id ? record.foreign_id : record.tx_hash);
+    if (record.tx_hash) {
+      let recordTxHash = record.tx_hash;
       var txHashDiv = document.createElement("div"),
           txHash = recordTxHash.substring(0, 7) + '...' + recordTxHash.substring(recordTxHash.length-7),
           txHashHref = STELLAR_EXPERT_TRANSACTION_URL + recordTxHash,
@@ -218,43 +238,75 @@
       txHashSmall.appendChild(txHashText);
       txHashSmall.appendChild(txHashA);
       txHashA.appendChild(txHashAText);
-      descriptionContentDiv.append(txHashDiv);
+      descriptionContentA.append(txHashDiv);
     }
 
-    // Like, comment and award buttons in description container
+    // Like, comment and reward buttons in description container
     actionsDiv.setAttribute("class", "d-flex flex-row justify-content-start mt-2");
 
     actionLikeIconSpan.setAttribute("data-feather", "heart");
     actionLikeContainer.setAttribute("class", "pr-4");
-    actionLikeButton.setAttribute("class", "btn btn-link text-dark p-0"); // TODO: format either text-dark or text-danger, text-warning, text-info depending on whether user has liked, awarded, or commented
+    if (record.liked_by && record.liked_by.includes(CURRENT_USER_ID)) {
+      actionLikeButton.setAttribute("class", "btn btn-link text-danger p-0");
+    } else {
+      actionLikeButton.setAttribute("class", "btn btn-link text-dark p-0");
+    }
+    // Set the data attributes needed for POST to like/unlike endpoint
+    actionLikeButton.setAttribute("data-id", record.foreign_id);
+    actionLikeButton.setAttribute("data-activity_id", record.id);
+    // Append rest of DOM to button and container
     actionLikeSmall.setAttribute("class", "pl-1");
     actionLikeButton.append(actionLikeIconSpan);
     actionLikeSmall.append(actionLikeText);
     actionLikeButton.append(actionLikeSmall);
     actionLikeContainer.append(actionLikeButton);
 
-    actionAwardIconSpan.setAttribute("data-feather", "award");
-    actionAwardContainer.setAttribute("class", "pr-4");
-    actionAwardButton.setAttribute("class", "btn btn-link text-dark p-0");
-    actionAwardSmall.setAttribute("class", "pl-1");
-    actionAwardButton.append(actionAwardIconSpan);
-    actionAwardSmall.append(actionAwardText);
-    actionAwardButton.append(actionAwardSmall);
-    actionAwardContainer.append(actionAwardButton);
+    actionRewardIconSpan.setAttribute("data-feather", "award");
+    actionRewardContainer.setAttribute("class", "pr-4");
+    if (record.rewarded_by && record.rewarded_by.includes(CURRENT_USER_ID)) {
+      actionRewardButton.setAttribute("class", "btn btn-link text-warning p-0");
+    } else {
+      actionRewardButton.setAttribute("class", "btn btn-link text-dark p-0");
+    }
+    // Set the data attributes needed for button click modal open to reward
+    actionRewardButton.setAttribute("data-id", record.foreign_id);
+    actionRewardButton.setAttribute("data-activity_id", record.id);
+    actionRewardButton.setAttribute("data-toggle", "modal");
+    actionRewardButton.setAttribute("data-target", "#rewardActivityModal");
+    // Append rest of DOM to button and container
+    actionRewardSmall.setAttribute("class", "pl-1");
+    actionRewardButton.append(actionRewardIconSpan);
+    actionRewardSmall.append(actionRewardText);
+    actionRewardButton.append(actionRewardSmall);
+    actionRewardContainer.append(actionRewardButton);
 
     actionCommentIconSpan.setAttribute("data-feather", "message-circle");
     actionCommentContainer.setAttribute("class", "pr-4");
-    actionCommentButton.setAttribute("class", "btn btn-link text-dark p-0");
+    if (record.commented_by && record.commented_by.includes(CURRENT_USER_ID)) {
+      actionCommentButton.setAttribute("class", "btn btn-link text-primary p-0");
+    } else {
+      actionCommentButton.setAttribute("class", "btn btn-link text-dark p-0");
+    }
+    if (record.activity_url) {
+      actionCommentButton.setAttribute("href", record.activity_url);
+    }
     actionCommentSmall.setAttribute("class", "pl-1");
     actionCommentButton.append(actionCommentIconSpan);
     actionCommentSmall.append(actionCommentText);
     actionCommentButton.append(actionCommentSmall);
     actionCommentContainer.append(actionCommentButton);
 
-    actionsDiv.appendChild(actionLikeContainer);
-    actionsDiv.appendChild(actionAwardContainer);
-    actionsDiv.appendChild(actionCommentContainer);
-    // TODO: descriptionContentDiv.append(actionsDiv);
+    // TODO: actionsDiv.appendChild(actionLikeContainer);
+    // TODO: actionsDiv.appendChild(actionRewardContainer);
+    if (record.verb != 'comment') {
+      actionsDiv.appendChild(actionCommentContainer);
+    }
+
+    if (record.foreign_id) {
+      // Only allow actions if there's an associated activity detail
+      // in our system
+      descriptionContentDiv.append(actionsDiv);
+    }
 
     // Feather icon container for activity icon type
     var featherIconSpan = document.createElement("span");
@@ -266,6 +318,9 @@
     //    2. Token issuance (verb: issue)
     //    3. Buy/sell of asset (verb: offer)
     //    4. Follow user (verb: follow)
+    //    5. Post on timeline (verb: post)
+    //    6. Comment on post in timeline (verb: comment)
+    //    7. Trust a new asset (verb: trust)
     var featherIcon, assetText,
         actorA = document.createElement("a"),
         objectA = document.createElement("a");
@@ -304,7 +359,7 @@
         break;
       case "issue":
         // Token issuance
-        // e.x.: <span>Tokens issued: <a href="" class="text-dark font-weight-bold">@mikey.rf</a> issued 1000 new <a href="" class="text-dark font-weight-bold">NUCL</a></span>
+        // e.x.: <span>Tokens issued: <a href="" class="text-dark font-weight-bold">@mikey.rf</a> issued 1000 new <a href="" class="text-dark font-weight-bold">NUCL</a> from <a href="" class="text-info" target="_blank">GXJOSFOF...OJFSOFJ</a></span>
         featherIcon = "anchor";
 
         assetText = (record.object_type == 'native'? 'XLM': record.object_code);
@@ -377,10 +432,61 @@
         descriptionSpan.append(document.createTextNode(" trusted "));
         descriptionSpan.append(objectA);
         break;
+      case "post":
+        // Posting message to timeline
+        // e.x.: <span><a href="" class="text-dark font-weight-bold">@mikey.rf</a> posted</span>
+        featherIcon = "edit-2";
+        descriptionSpan.append(actorA);
+        descriptionSpan.append(document.createTextNode(" posted"));
+        break;
+      case "comment":
+        // Commenting on activity in timeline
+        // e.x.: <span><a href="" class="text-dark font-weight-bold">@mikey.rf</a> commented</span>
+        featherIcon = "message-circle";
+        descriptionSpan.append(actorA);
+        descriptionSpan.append(document.createTextNode(" commented"));
+        break;
     }
 
     // Add the feather icon to list item then return li
     featherIconSpan.setAttribute("data-feather", featherIcon);
     return li;
   }
+
+  /** postForm submission to Nucleo **/
+  // TODO: Instantiate a listener to verify item has been added to feed before redirecting
+  $('#postForm').submit(function(event) {
+    event.preventDefault();
+
+    // Grab the public_key data from the form
+    let successUrl = this.dataset.success;
+
+    // Build the JSON data to be submitted
+    var formData = {};
+    $(this).serializeArray().forEach(function(obj) {
+      formData[obj.name] = obj.value;
+    });
+
+    // Start Ladda animation for UI loading
+    let laddaButton = Ladda.create($(this).find(":submit")[0]);
+    laddaButton.start();
+
+    // Submit it to Nucleo's create account endpoint
+    // TODO: IMPLEMENT A LISTENER FOR SUCCESSFUL ADDITION TO FEED IF NOT ALREADY LISTENING: Use
+    $.post(this.action, formData)
+    .then(function(result) {
+      // Then redirect to the user's profile page with successUrl
+      // TODO: if (successUrl)
+      window.location.href = successUrl;
+    })
+    .catch(function(error) {
+      // Fail response gives form.errors. Make sure to show in error form
+      // TODO: let modalHeader = $("#addStellarModalForm").find('.modal-body-header')[0];
+
+      // Stop the button loading animation then display the error
+      Ladda.stopAll();
+      console.error('Something went wrong with Nucleo call', error);
+      // TODO: displayError(modalHeader, error.message);
+    });
+  })
 })();

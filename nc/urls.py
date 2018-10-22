@@ -43,7 +43,11 @@ urlpatterns = [
     url(r'^feed/$', views.FeedRedirectView.as_view(), name='feed-redirect'),
     url(r'^feed/news/$', views.FeedNewsListView.as_view(), name='feed-news'),
     url(r'^feed/activity/$', views.FeedActivityListView.as_view(), name='feed-activity'),
+    url(r'^feed/activity/(?P<pk>\d+)/$', views.FeedActivityDetailView.as_view(), name='feed-activity-detail'),
     url(r'^feed/activity/create/$', views.FeedActivityCreateView.as_view(), name='feed-activity-create'),
+    url(r'^feed/post/create/$', views.FeedPostCreateView.as_view(), name='feed-post-create'),
+    url(r'^feed/activity/(?P<pk>\d+)/comment/$', views.FeedCommentUpdateView.as_view(), name='feed-comment-update'),
+    url(r'^feed/reward/create/$', views.FeedRewardCreateView.as_view(), name='feed-reward-create'),
 
     # Send
     url(r'^send/$', views.SendRedirectView.as_view(), name='send-redirect'),

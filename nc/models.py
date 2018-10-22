@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-import os, requests, toml, urlparse
+import hashlib, os, requests, toml, urlparse
 
 from allauth.utils import build_absolute_uri
 
@@ -10,6 +10,7 @@ from datetime import timedelta
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.staticfiles.templatetags.staticfiles import static
+from django.core import signing
 from django.db import models
 from django.forms.models import model_to_dict
 from django.urls import reverse
@@ -46,198 +47,6 @@ def model_file_directory_path(instance, filename, field):
     new_filename = new_file_root + file_ext
     return '{0}/{1}/{2}/{3}'.format(type(instance).__name__.lower(),
         instance.id, field, new_filename)
-
-@python_2_unicode_compatible
-class Profile(models.Model):
-    """
-    Profile associated with a user.
-    """
-    DEFAULT_PIC_URL = static('nc/images/profile.png')
-
-    user = models.OneToOneField(settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE, related_name='profile', primary_key=True)
-    bio = models.CharField(max_length=255, null=True, blank=True, default=None)
-    pic = models.ImageField(
-        _('Profile picture'),
-        validators=[validators.validate_file_size, validators.validate_image_mimetype],
-        upload_to=partial(profile_file_directory_path, field='pic'),
-        null=True, blank=True, default=None
-    )
-    cover = models.ImageField(
-        _('Cover photo'),
-        validators=[validators.validate_file_size, validators.validate_image_mimetype],
-        upload_to=partial(profile_file_directory_path, field='cover'),
-        null=True, blank=True, default=None
-    )
-    followers = models.ManyToManyField(
-        settings.AUTH_USER_MODEL,
-        related_name='profiles_following',
-        blank=True
-    )
-    # NOTE: If private profile, must approve follower request for other user to
-    # see assets, accounts, etc.
-    is_private = models.BooleanField(default=False)
-    accounts_created = models.PositiveSmallIntegerField(default=0)
-
-    # Settings
-    ## Email
-    allow_payment_email = models.BooleanField(default=True)
-    allow_token_issuance_email = models.BooleanField(default=True)
-    allow_trade_email = models.BooleanField(default=True)
-    allow_follower_email = models.BooleanField(default=True)
-    allow_trust_email = models.BooleanField(default=True)
-
-    # NOTE: user.get_full_name(), followers.count() are duplicated here
-    # so Algolia search index updates work when user, follower updates occur (kept in sync through signals.py)
-    full_name = models.CharField(max_length=200, null=True, blank=True, default=None)
-    followers_count = models.IntegerField(default=0)
-
-    def username(self):
-        """
-        Have this method as a proxy for the search index.
-
-        user.username will never change in the db so search index related
-        update issues with related fields don't exist here.
-        """
-        return self.user.username
-
-    def pic_url(self):
-        """
-        Have this method as a proxy for the search index.
-        """
-        pic_url = self.DEFAULT_PIC_URL
-        if self.pic:
-            pic_url = self.pic.url
-        return pic_url
-
-    def href(self):
-        """
-        Have this method as a proxy for the search index.
-        """
-        return reverse('nc:user-detail', kwargs={'slug': self.user.username})
-
-    def __str__(self):
-        bio =  ': ' + self.bio if self.bio else ''
-        return self.user.username + bio
-
-
-@python_2_unicode_compatible
-class FollowRequest(models.Model):
-    """
-    Follow request for users who have a private profile.
-    """
-    user = models.ForeignKey(settings.AUTH_USER_MODEL,
-        related_name='follower_requests', on_delete=models.CASCADE)
-    requester = models.ForeignKey(settings.AUTH_USER_MODEL,
-        related_name='requests_to_follow', on_delete=models.CASCADE)
-    created = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        unique_together = ('user', 'requester')
-
-    def __str__(self):
-        return 'Follow request: ' + self.requester.username + ' -> ' + self.user.username
-
-
-@python_2_unicode_compatible
-class Activity(models.Model):
-    """
-    Activity for items in user's activity feed.
-    """
-    user = models.ForeignKey(settings.AUTH_USER_MODEL,
-        related_name='activities', on_delete=models.CASCADE)
-    activity_id = models.CharField(max_length=36) # NOTE: this is what we get back from stream
-    tx_hash = models.CharField(max_length=64, null=True, blank=True, default=None)# NOTE: this is what we get back from Horizon if activity is a tx type
-    created = models.DateTimeField(auto_now_add=True)
-
-    liked_by = models.ManyToManyField(
-        settings.AUTH_USER_MODEL,
-        related_name='activities_liked',
-        blank=True
-    )
-    awarded_by = models.ManyToManyField(
-        settings.AUTH_USER_MODEL,
-        through='Award',
-        related_name='activities_awarded',
-        blank=True
-    )
-
-    POST = 0
-    SEND = 1
-    ISSUE = 2
-    TRUST = 3
-    OFFER = 4
-    FOLLOW = 5
-    COMMENT = 6
-    VERB_CHOICES = (
-        (POST, 'post'),
-        (SEND, 'send'),
-        (ISSUE, 'issue'),
-        (TRUST, 'trust'),
-        (OFFER, 'offer'),
-        (FOLLOW, 'follow'),
-        (COMMENT, 'comment'),
-    )
-    verb = models.IntegerField(choices=VERB_CHOICES, default=POST)
-
-    # Activity manager
-    objects = managers.ActivityManager()
-
-    def __str__(self):
-        activity_id = self.activity_id if self.activity_id else self.id
-        return 'Activity {0} {1}'.format(self.get_verb_display(), activity_id)
-
-
-@python_2_unicode_compatible
-class Comment(models.Model):
-    """
-    Comment on an activity in a user's activity feed.
-    """
-    parent = models.ForeignKey(Activity, related_name='comments', on_delete=models.CASCADE)
-    activity_id = models.CharField(max_length=36) # NOTE: this is what we get back from stream for this comment
-    created = models.DateTimeField(auto_now_add=True)
-
-    liked_by = models.ManyToManyField(
-        settings.AUTH_USER_MODEL,
-        related_name='comments_liked',
-        blank=True
-    )
-    awarded_by = models.ManyToManyField(
-        settings.AUTH_USER_MODEL,
-        through='Award',
-        related_name='comments_awarded',
-        blank=True
-    )
-
-    # Comment manager
-    objects = managers.CommentManager()
-
-    def __str__(self):
-        comment_id = self.activity_id if self.activity_id else self.id
-        parent = self.parent
-        parent_id = parent.activity_id if parent.activity_id else parent.id
-        return 'Comment {0} on activity {1}'.format(comment_id, parent_id)
-
-
-@python_2_unicode_compatible
-class Award(models.Model):
-    """
-    Award for an activity or a comment on an activity.
-    """
-    activity = models.ForeignKey(Activity, related_name='awards', on_delete=models.CASCADE, null=True, blank=True, default=None)
-    comment = models.ForeignKey(Comment, related_name='awards', on_delete=models.CASCADE, null=True, blank=True, default=None)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL,
-        related_name='awards_given_out', on_delete=models.CASCADE)
-    tx_hash = models.CharField(max_length=64) # NOTE: this is what we get back from Horizon
-    xlm_value = models.FloatField(default=0.0)
-
-    def __str__(self):
-        item_id = ''
-        if self.activity:
-            item_id = str(self.activity)
-        elif self.comment:
-            item_id = str(self.comment)
-        return 'Award of {0} XLM from {1} for {2}'.format(self.xlm_value, self.user, item_id)
 
 
 @python_2_unicode_compatible
@@ -384,6 +193,238 @@ class AccountFundRequest(models.Model):
 
     def __str__(self):
         return 'Funding request: ' + self.requester.username + ' -> ' + self.public_key
+
+
+@python_2_unicode_compatible
+class Profile(models.Model):
+    """
+    Profile associated with a user.
+    """
+    DEFAULT_PIC_URL = static('nc/images/profile.png')
+
+    user = models.OneToOneField(settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE, related_name='profile', primary_key=True)
+    bio = models.CharField(max_length=255, null=True, blank=True, default=None)
+    pic = models.ImageField(
+        _('Profile picture'),
+        validators=[validators.validate_file_size, validators.validate_image_mimetype],
+        upload_to=partial(profile_file_directory_path, field='pic'),
+        null=True, blank=True, default=None
+    )
+    cover = models.ImageField(
+        _('Cover photo'),
+        validators=[validators.validate_file_size, validators.validate_image_mimetype],
+        upload_to=partial(profile_file_directory_path, field='cover'),
+        null=True, blank=True, default=None
+    )
+    followers = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        related_name='profiles_following',
+        blank=True
+    )
+    # NOTE: If private profile, must approve follower request for other user to
+    # see assets, accounts, etc.
+    is_private = models.BooleanField(default=False)
+    accounts_created = models.PositiveSmallIntegerField(default=0)
+
+    # Settings
+    ## Email
+    allow_payment_email = models.BooleanField(default=True)
+    allow_token_issuance_email = models.BooleanField(default=True)
+    allow_trade_email = models.BooleanField(default=True)
+    allow_follower_email = models.BooleanField(default=True)
+    allow_trust_email = models.BooleanField(default=True)
+    allow_post_email = models.BooleanField(default=True)
+    allow_comment_email = models.BooleanField(default=True)
+
+    ## Reward
+    default_reward_account = models.ForeignKey(Account, on_delete=models.SET_DEFAULT,
+        null=True, blank=True, default=None)
+    default_xlm_reward_amount = models.FloatField(default=1.0)
+
+    # NOTE: user.get_full_name(), followers.count() are duplicated here
+    # so Algolia search index updates work when user, follower updates occur (kept in sync through signals.py)
+    full_name = models.CharField(max_length=200, null=True, blank=True, default=None)
+    followers_count = models.IntegerField(default=0)
+
+    def username(self):
+        """
+        Have this method as a proxy for the search index.
+
+        user.username will never change in the db so search index related
+        update issues with related fields don't exist here.
+        """
+        return self.user.username
+
+    def pic_url(self):
+        """
+        Have this method as a proxy for the search index.
+        """
+        pic_url = self.DEFAULT_PIC_URL
+        if self.pic:
+            pic_url = self.pic.url
+        return pic_url
+
+    def href(self):
+        """
+        Have this method as a proxy for the search index.
+        """
+        return reverse('nc:user-detail', kwargs={'slug': self.user.username})
+
+    def __str__(self):
+        bio =  ': ' + self.bio if self.bio else ''
+        return self.user.username + bio
+
+
+@python_2_unicode_compatible
+class FollowRequest(models.Model):
+    """
+    Follow request for users who have a private profile.
+    """
+    user = models.ForeignKey(settings.AUTH_USER_MODEL,
+        related_name='follower_requests', on_delete=models.CASCADE)
+    requester = models.ForeignKey(settings.AUTH_USER_MODEL,
+        related_name='requests_to_follow', on_delete=models.CASCADE)
+    created = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'requester')
+
+    def __str__(self):
+        return 'Follow request: ' + self.requester.username + ' -> ' + self.user.username
+
+
+@python_2_unicode_compatible
+class Activity(models.Model):
+    """
+    Activity for items in user's activity feed.
+    """
+    user = models.ForeignKey(settings.AUTH_USER_MODEL,
+        related_name='activities', on_delete=models.CASCADE)
+    activity_id = models.CharField(max_length=36, null=True, blank=True, default=None) # NOTE: this is what we get back from stream
+    tx_hash = models.CharField(max_length=64, null=True, blank=True, default=None)# NOTE: this is what we get back from Horizon if activity is a tx type
+    created = models.DateTimeField(null=True, blank=True, default=None)
+
+    liked_by = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        related_name='activities_liked',
+        blank=True
+    )
+    rewarded_by = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        through='Reward',
+        related_name='activities_rewarded',
+        blank=True
+    )
+    commented_by = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        through='Comment',
+        related_name='activities_commented_on',
+        blank=True
+    )
+
+    POST = 0
+    SEND = 1
+    ISSUE = 2
+    TRUST = 3
+    OFFER = 4
+    FOLLOW = 5
+    COMMENT = 6
+    VERB_CHOICES = (
+        (POST, 'post'),
+        (SEND, 'send'),
+        (ISSUE, 'issue'),
+        (TRUST, 'trust'),
+        (OFFER, 'offer'),
+        (FOLLOW, 'follow'),
+        (COMMENT, 'comment'),
+    )
+    verb = models.IntegerField(choices=VERB_CHOICES, default=POST)
+
+    # Activity manager
+    objects = managers.ActivityManager()
+
+    def generate_reward_memo_hash(self, request):
+        """
+        Generate the reward 32 byte memo hash for verification when request.user
+        looks to reward this comment.
+        """
+        data = {
+            'id': self.activity_id,
+            'from': request.user.id,
+            'to': self.user.id
+        }
+        return hashlib.sha256(signing.dumps(data)).digest()
+
+    def __str__(self):
+        activity_id = self.activity_id if self.activity_id else self.id
+        return 'Activity {0} {1}'.format(self.get_verb_display(), activity_id)
+
+
+@python_2_unicode_compatible
+class Comment(models.Model):
+    """
+    Comment on an activity in a user's activity feed.
+    """
+    parent = models.ForeignKey(Activity, related_name='comments', on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL,
+        related_name='comments', on_delete=models.CASCADE)
+    activity_id = models.CharField(max_length=36, null=True, blank=True, default=None) # NOTE: this is what we get back from stream for this comment
+    created = models.DateTimeField(null=True, blank=True, default=None)
+
+    liked_by = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        related_name='comments_liked',
+        blank=True
+    )
+    rewarded_by = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        through='Reward',
+        related_name='comments_rewarded',
+        blank=True
+    )
+
+    # Comment manager
+    objects = managers.CommentManager()
+
+    def generate_reward_memo_hash(self, request):
+        """
+        Generate the reward 32 byte memo hash for verification when request.user
+        looks to reward this comment.
+        """
+        data = {
+            'id': self.activity_id,
+            'from': request.user.id,
+            'to': self.user.id
+        }
+        return hashlib.sha256(signing.dumps(data)).digest()
+
+    def __str__(self):
+        comment_id = self.activity_id if self.activity_id else self.id
+        parent = self.parent
+        parent_id = parent.activity_id if parent.activity_id else parent.id
+        return 'Comment {0} on activity {1}'.format(comment_id, parent_id)
+
+
+@python_2_unicode_compatible
+class Reward(models.Model):
+    """
+    Reward for an activity or a comment on an activity.
+    """
+    activity = models.ForeignKey(Activity, related_name='rewards', on_delete=models.CASCADE, null=True, blank=True, default=None)
+    comment = models.ForeignKey(Comment, related_name='rewards', on_delete=models.CASCADE, null=True, blank=True, default=None)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL,
+        related_name='rewards_given_out', on_delete=models.CASCADE)
+    tx_hash = models.CharField(max_length=64) # NOTE: this is what we get back from Horizon
+    xlm_value = models.FloatField(default=0.0)
+
+    def __str__(self):
+        item_id = ''
+        if self.activity:
+            item_id = str(self.activity)
+        elif self.comment:
+            item_id = str(self.comment)
+        return 'Reward of {0} XLM from {1} for {2}'.format(self.xlm_value, self.user, item_id)
 
 
 @python_2_unicode_compatible
