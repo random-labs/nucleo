@@ -32,7 +32,7 @@ ENV_NAME = os.environ.get('ENV_NAME') # to distinguish between web v.s. work(er)
 
 # SECURITY WARNING: don't run with debug turned on in production!
 if ENV_TYPE == 'prod':
-    DEBUG = False
+    DEBUG = True
 else:
     DEBUG = True
 

@@ -43,6 +43,7 @@ class AccountAdapter(DefaultAccountAdapter):
 
             # Queue task to add activity to user feed
             print get_queue_backend()
+            print get_queue_backend().delay
             print settings.STREAM_USER_FEED
             print nc_tasks.add_activity_to_feed
             print self.request.user.id
