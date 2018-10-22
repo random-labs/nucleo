@@ -27,6 +27,7 @@ class SQSBoto3QueueBackend(BaseQueueBackend):
         for worker to eventually consume task.
         """
         response = self._send_message(task, *args, **kwargs)
+        print response
 
     def _send_message(self, task, *args, **kwargs):
         """
@@ -34,6 +35,8 @@ class SQSBoto3QueueBackend(BaseQueueBackend):
 
         Return response of Successful and Failed messages.
         """
+        print self.queue_url
+        print self._format_message_body(task, *args, **kwargs)
         return self.client.send_message(
             QueueUrl=self.queue_url,
             MessageBody=self._format_message_body(task, *args, **kwargs),
