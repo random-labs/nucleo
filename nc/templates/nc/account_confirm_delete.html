@@ -21,7 +21,7 @@
   {% csrf_token %}
   <h6 class="p-2">Are you sure you want to remove this account from your Nucleo profile?</h6>
   <div class="my-4">
-    <a href="{% url 'nc:user-redirect' %}" class="btn btn-secondary m-1">Cancel</a>
+    <a href="{% url 'nc:account-redirect' %}" class="btn btn-secondary m-1">Cancel</a>
     <button class="btn btn-danger m-1" type="submit">Remove Account</button>
   </div>
 </form>

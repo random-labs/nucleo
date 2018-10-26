@@ -236,9 +236,9 @@ class SignupUserFollowingUpdateView(LoginRequiredMixin, generic.ListView):
 ## User
 class UserDetailView(mixins.PrefetchedSingleObjectMixin, mixins.IndexContextMixin,
     mixins.LoginRedirectContextMixin, mixins.ActivityFormContextMixin,
-    mixins.AccountFormContextMixin, mixins.FeedActivityContextMixin,
-    mixins.ViewTypeContextMixin, mixins.DepositAssetsContextMixin,
-    mixins.UserAssetsContextMixin, generic.DetailView):
+    mixins.FeedActivityContextMixin, mixins.ViewTypeContextMixin,
+    mixins.DepositAssetsContextMixin, mixins.UserAssetsContextMixin,
+    generic.DetailView):
     model = get_user_model()
     slug_field = 'username'
     template_name = 'nc/profile.html'
@@ -286,7 +286,8 @@ class UserRedirectView(LoginRequiredMixin, generic.RedirectView):
 
 
 class UserUpdateView(LoginRequiredMixin, mixins.PrefetchedSingleObjectMixin,
-    mixins.IndexContextMixin, mixins.ViewTypeContextMixin, generic.UpdateView):
+    mixins.IndexContextMixin, mixins.ViewTypeContextMixin,
+    mixins.DepositAssetsContextMixin, generic.UpdateView):
     model = get_user_model()
     slug_field = 'username'
     form_class = forms.UserProfileUpdateMultiForm
@@ -325,7 +326,8 @@ class UserSettingsRedirectView(LoginRequiredMixin, generic.RedirectView):
 
 
 class UserSettingsUpdateView(LoginRequiredMixin, mixins.PrefetchedSingleObjectMixin,
-    mixins.IndexContextMixin, mixins.ViewTypeContextMixin, generic.UpdateView):
+    mixins.IndexContextMixin, mixins.ViewTypeContextMixin,
+    mixins.DepositAssetsContextMixin, generic.UpdateView):
     model = get_user_model()
     slug_field = 'username'
     form_class = forms.ProfileSettingsUpdateMultiForm
@@ -356,7 +358,8 @@ class UserSettingsUpdateView(LoginRequiredMixin, mixins.PrefetchedSingleObjectMi
 
 
 class UserFollowUpdateView(LoginRequiredMixin, mixins.PrefetchedSingleObjectMixin,
-    mixins.IndexContextMixin, mixins.ViewTypeContextMixin, generic.UpdateView):
+    mixins.IndexContextMixin, mixins.ViewTypeContextMixin,
+    mixins.DepositAssetsContextMixin, generic.UpdateView):
     model = get_user_model()
     slug_field = 'username'
     form_class = forms.UserFollowUpdateForm
@@ -463,7 +466,8 @@ class UserFollowUpdateView(LoginRequiredMixin, mixins.PrefetchedSingleObjectMixi
 
 
 class UserFollowRequestUpdateView(LoginRequiredMixin, mixins.PrefetchedSingleObjectMixin,
-    mixins.IndexContextMixin, mixins.ViewTypeContextMixin, generic.UpdateView):
+    mixins.IndexContextMixin, mixins.ViewTypeContextMixin, mixins.DepositAssetsContextMixin,
+    generic.UpdateView):
     model = get_user_model()
     slug_field = 'username'
     form_class = forms.UserFollowRequestUpdateForm
@@ -540,7 +544,8 @@ class UserFollowRequestUpdateView(LoginRequiredMixin, mixins.PrefetchedSingleObj
 
 
 class UserFollowRequestDeleteView(LoginRequiredMixin, mixins.PrefetchedSingleObjectMixin,
-    mixins.IndexContextMixin, mixins.ViewTypeContextMixin, generic.DeleteView):
+    mixins.IndexContextMixin, mixins.ViewTypeContextMixin, mixins.DepositAssetsContextMixin,
+    generic.DeleteView):
     model = get_user_model()
     slug_field = 'username'
     template_name = 'nc/profile_follow_request_confirm_delete.html'
@@ -579,7 +584,8 @@ class UserFollowRequestDeleteView(LoginRequiredMixin, mixins.PrefetchedSingleObj
 
 
 class UserFollowerListView(LoginRequiredMixin, mixins.IndexContextMixin,
-    mixins.ViewTypeContextMixin, generic.ListView):
+    mixins.ViewTypeContextMixin, mixins.DepositAssetsContextMixin,
+    generic.ListView):
     template_name = 'nc/profile_follow_list.html'
     paginate_by = 50
     view_type = 'profile'
@@ -636,7 +642,8 @@ class UserFollowerListView(LoginRequiredMixin, mixins.IndexContextMixin,
             .prefetch_related('profile')
 
 class UserFollowingListView(LoginRequiredMixin, mixins.IndexContextMixin,
-    mixins.ViewTypeContextMixin, generic.ListView):
+    mixins.ViewTypeContextMixin, mixins.DepositAssetsContextMixin,
+    generic.ListView):
     template_name = 'nc/profile_follow_list.html'
     paginate_by = 50
     view_type = 'profile'
@@ -774,11 +781,12 @@ class UserPortfolioDataListView(mixins.JSONResponseMixin, generic.TemplateView):
 
 ## Account
 class AccountCreateView(LoginRequiredMixin, mixins.AjaxableResponseMixin,
-    mixins.IndexContextMixin, mixins.ViewTypeContextMixin, generic.CreateView):
+    mixins.IndexContextMixin, mixins.ViewTypeContextMixin,
+    mixins.DepositAssetsContextMixin, generic.CreateView):
     model = Account
     form_class = forms.AccountCreateForm
-    success_url = reverse_lazy('nc:user-redirect')
-    view_type = 'profile'
+    success_url = reverse_lazy('nc:account-redirect')
+    view_type = 'account'
 
     def get_form_kwargs(self):
         """
@@ -805,14 +813,44 @@ class AccountCreateView(LoginRequiredMixin, mixins.AjaxableResponseMixin,
 
         return HttpResponseRedirect(self.get_success_url())
 
+class AccountRedirectView(LoginRequiredMixin, generic.RedirectView):
+    query_string = True
+    pattern_name = 'nc:account-detail'
+
+    def get_redirect_url(self, *args, **kwargs):
+        kwargs.update({ 'slug': self.request.user.username })
+        return super(AccountRedirectView, self).get_redirect_url(*args, **kwargs)
+
+class AccountDetailView(LoginRequiredMixin, mixins.PrefetchedSingleObjectMixin,
+    mixins.IndexContextMixin, mixins.AccountFormContextMixin,
+    mixins.ViewTypeContextMixin, mixins.DepositAssetsContextMixin,
+    mixins.UserAssetsContextMixin, generic.DetailView):
+    model = get_user_model()
+    slug_field = 'username'
+    template_name = 'nc/account.html'
+    prefetch_related_lookups = ['accounts']
+    user_field = 'request.user'
+    view_type = 'account'
+
+    def get_object(self, queryset=None):
+        """
+        Throw a 404 if request.user is not the same as obj.user.
+        """
+        obj = super(AccountDetailView, self).get_object(queryset)
+        if obj != self.request.user:
+            raise Http404(_("No %(verbose_name)s found matching the query") %
+                          {'verbose_name': self.model._meta.verbose_name})
+        return obj
+
 class AccountUpdateView(LoginRequiredMixin, mixins.IndexContextMixin,
-    mixins.ViewTypeContextMixin, generic.UpdateView):
+    mixins.ViewTypeContextMixin, mixins.DepositAssetsContextMixin,
+    generic.UpdateView):
     model = Account
     slug_field = 'public_key'
     form_class = forms.AccountUpdateForm
     template_name = 'nc/account_update_form.html'
-    success_url = reverse_lazy('nc:user-redirect')
-    view_type = 'profile'
+    success_url = reverse_lazy('nc:account-redirect')
+    view_type = 'account'
 
     def get_queryset(self):
         """
@@ -821,11 +859,12 @@ class AccountUpdateView(LoginRequiredMixin, mixins.IndexContextMixin,
         return self.request.user.accounts.all()
 
 class AccountDeleteView(LoginRequiredMixin, mixins.IndexContextMixin,
-    mixins.ViewTypeContextMixin, generic.DeleteView):
+    mixins.ViewTypeContextMixin, mixins.DepositAssetsContextMixin,
+    generic.DeleteView):
     model = Account
     slug_field = 'public_key'
-    success_url = reverse_lazy('nc:user-redirect')
-    view_type = 'profile'
+    success_url = reverse_lazy('nc:account-redirect')
+    view_type = 'account'
 
     # TODO: if this is user's default account, set to next possible default!
 
@@ -836,12 +875,13 @@ class AccountDeleteView(LoginRequiredMixin, mixins.IndexContextMixin,
         return self.request.user.accounts.all()
 
 class AccountFundRequestCreateView(LoginRequiredMixin, mixins.AjaxableResponseMixin,
-    mixins.IndexContextMixin, mixins.ViewTypeContextMixin, generic.CreateView):
+    mixins.IndexContextMixin, mixins.ViewTypeContextMixin, mixins.DepositAssetsContextMixin,
+    generic.CreateView):
     model = AccountFundRequest
     form_class = forms.AccountFundRequestCreateForm
     template_name = 'nc/account_fund_request_form.html'
-    success_url = reverse_lazy('nc:user-redirect')
-    view_type = 'profile'
+    success_url = reverse_lazy('nc:account-redirect')
+    view_type = 'account'
 
     def get_form_kwargs(self):
         """
@@ -984,7 +1024,8 @@ class AssetRedirectView(generic.RedirectView):
 
 class AssetDetailView(mixins.PrefetchedSingleObjectMixin, mixins.IndexContextMixin,
     mixins.ActivityFormContextMixin, mixins.LoginRedirectContextMixin,
-    mixins.ViewTypeContextMixin, generic.DetailView):
+    mixins.ViewTypeContextMixin, mixins.DepositAssetsContextMixin,
+    generic.DetailView):
     model = Asset
     slug_field = 'asset_id'
     template_name = 'nc/asset.html'
@@ -1167,7 +1208,8 @@ class AssetExchangeTickerListView(mixins.JSONResponseMixin, generic.TemplateView
 
 
 class AssetUpdateView(LoginRequiredMixin, mixins.PrefetchedSingleObjectMixin,
-    mixins.IndexContextMixin, mixins.ViewTypeContextMixin, generic.UpdateView):
+    mixins.IndexContextMixin, mixins.ViewTypeContextMixin,
+    mixins.DepositAssetsContextMixin, generic.UpdateView):
     model = Asset
     form_class = forms.AssetUpdateForm
     slug_field = 'asset_id'
@@ -1192,7 +1234,8 @@ class AssetUpdateView(LoginRequiredMixin, mixins.PrefetchedSingleObjectMixin,
 
 
 class AssetTrustListView(LoginRequiredMixin, mixins.IndexContextMixin,
-    mixins.ViewTypeContextMixin, mixins.ActivityFormContextMixin, generic.ListView):
+    mixins.ViewTypeContextMixin, mixins.ActivityFormContextMixin,
+    mixins.DepositAssetsContextMixin, generic.ListView):
     template_name = 'nc/asset_trust_list.html'
     paginate_by = 50
     view_type = 'asset'
@@ -1270,7 +1313,8 @@ class AssetTrustListView(LoginRequiredMixin, mixins.IndexContextMixin,
 
 
 class AssetTrustedByListView(LoginRequiredMixin, mixins.IndexContextMixin,
-    mixins.ViewTypeContextMixin, generic.ListView):
+    mixins.ViewTypeContextMixin, mixins.DepositAssetsContextMixin,
+    generic.ListView):
     template_name = 'nc/asset_trusted_by_list.html'
     paginate_by = 50
     view_type = 'asset'
@@ -1309,8 +1353,7 @@ class AssetTrustedByListView(LoginRequiredMixin, mixins.IndexContextMixin,
 class AssetTopListView(mixins.IndexContextMixin, mixins.ViewTypeContextMixin,
     mixins.LoginRedirectContextMixin, mixins.ActivityFormContextMixin,
     mixins.DepositAssetsContextMixin, mixins.FeedActivityContextMixin,
-    mixins.PostFormContextMixin, mixins.UserFollowerRequestsContextMixin,
-    mixins.UserPortfolioContextMixin, generic.ListView):
+    mixins.PostFormContextMixin, mixins.UserPortfolioContextMixin, generic.ListView):
     feed_type = settings.STREAM_TIMELINE_FEED
     template_name = "nc/asset_top_list.html"
     paginate_by = 50
@@ -1425,8 +1468,7 @@ class LeaderboardRedirectView(generic.RedirectView):
 class LeaderboardListView(mixins.IndexContextMixin, mixins.ViewTypeContextMixin,
     mixins.LoginRedirectContextMixin, mixins.FeedActivityContextMixin,
     mixins.DepositAssetsContextMixin, mixins.PostFormContextMixin,
-    mixins.UserFollowerRequestsContextMixin, mixins.UserPortfolioContextMixin,
-    generic.ListView):
+    mixins.UserPortfolioContextMixin, generic.ListView):
     feed_type = settings.STREAM_TIMELINE_FEED
     user_field = 'request.user'
     template_name = "nc/leaderboard_list.html"
@@ -1509,8 +1551,7 @@ class FeedRedirectView(LoginRequiredMixin, generic.RedirectView):
 ### News
 class FeedNewsListView(LoginRequiredMixin, mixins.IndexContextMixin,
     mixins.DepositAssetsContextMixin, mixins.ViewTypeContextMixin,
-    mixins.UserFollowerRequestsContextMixin, mixins.UserPortfolioContextMixin,
-    mixins.JSONResponseMixin, generic.ListView):
+    mixins.UserPortfolioContextMixin, mixins.JSONResponseMixin, generic.ListView):
     template_name = "nc/feed_news_list.html"
     view_type = 'feed'
 
@@ -1576,9 +1617,8 @@ class FeedNewsListView(LoginRequiredMixin, mixins.IndexContextMixin,
 ### Activity
 class FeedActivityListView(LoginRequiredMixin, mixins.IndexContextMixin,
     mixins.FeedActivityContextMixin, mixins.DepositAssetsContextMixin,
-    mixins.PostFormContextMixin, mixins.UserFollowerRequestsContextMixin,
-    mixins.UserPortfolioContextMixin, mixins.ViewTypeContextMixin,
-    generic.TemplateView):
+    mixins.PostFormContextMixin, mixins.UserPortfolioContextMixin,
+    mixins.ViewTypeContextMixin, generic.TemplateView):
     feed_type = settings.STREAM_TIMELINE_FEED
     template_name = "nc/feed_activity_list.html"
     user_field = 'request.user'
@@ -1587,7 +1627,7 @@ class FeedActivityListView(LoginRequiredMixin, mixins.IndexContextMixin,
 class FeedActivityDetailView(LoginRequiredMixin,
     mixins.PrefetchedSingleObjectMixin, mixins.IndexContextMixin,
     mixins.FeedActivityContextMixin, mixins.ViewTypeContextMixin,
-    generic.DetailView):
+    mixins.DepositAssetsContextMixin, generic.DetailView):
     model = Activity
     feed_type = settings.STREAM_ACTIVITY_FEED
     prefetch_related_lookups = ['user__profile']
@@ -1597,11 +1637,12 @@ class FeedActivityDetailView(LoginRequiredMixin,
 
     def get_context_data(self, **kwargs):
         """
-        Provide a cryptographically signed username of authenticated user
-        for add Stellar account if detail object is current user.
+        Get the stream activity and provide the stream timeline feed name.
         """
         context = super(FeedActivityDetailView, self).get_context_data(**kwargs)
         if self.object and self.object.activity_id:
+            context['stream_timeline_feed'] = settings.STREAM_TIMELINE_FEED
+
             # Update the context for stream activity feed item and include
             # dict for easy retrieval of feather icon types
             resp = stream_client.get_activities(ids=[self.object.activity_id])
@@ -1631,7 +1672,7 @@ class FeedActivityDetailView(LoginRequiredMixin,
 
 
 class FeedActivityCreateView(LoginRequiredMixin, mixins.IndexContextMixin,
-    mixins.ViewTypeContextMixin, generic.CreateView):
+    mixins.ViewTypeContextMixin, mixins.DepositAssetsContextMixin, generic.CreateView):
     form_class = forms.FeedActivityCreateForm
     template_name = "nc/feed_activity_form.html"
     view_type = 'feed'
@@ -1672,7 +1713,8 @@ class FeedActivityCreateView(LoginRequiredMixin, mixins.IndexContextMixin,
         return HttpResponseRedirect(self.get_success_url())
 
 class FeedPostCreateView(LoginRequiredMixin, mixins.AjaxableResponseMixin,
-    mixins.IndexContextMixin, mixins.ViewTypeContextMixin, generic.CreateView):
+    mixins.IndexContextMixin, mixins.ViewTypeContextMixin, mixins.DepositAssetsContextMixin,
+    generic.CreateView):
     form_class = forms.FeedPostCreateForm
     success_url = reverse_lazy('nc:feed-redirect')
     template_name = "nc/feed_post_form.html"
@@ -1713,7 +1755,8 @@ class FeedPostCreateView(LoginRequiredMixin, mixins.AjaxableResponseMixin,
         return HttpResponseRedirect(self.get_success_url())
 
 class FeedCommentUpdateView(LoginRequiredMixin, mixins.AjaxableResponseMixin,
-    mixins.IndexContextMixin, mixins.ViewTypeContextMixin, generic.UpdateView):
+    mixins.IndexContextMixin, mixins.ViewTypeContextMixin,
+    mixins.DepositAssetsContextMixin, generic.UpdateView):
     model = Activity
     form_class = forms.FeedCommentUpdateForm
     success_url = reverse_lazy('nc:feed-redirect')
@@ -1755,8 +1798,31 @@ class FeedCommentUpdateView(LoginRequiredMixin, mixins.AjaxableResponseMixin,
         self.success_url = self.instance.get('success_url') if 'success_url' in self.instance else self.success_url
         return HttpResponseRedirect(self.get_success_url())
 
+class FeedLikeUpdateView(LoginRequiredMixin, mixins.AjaxableResponseMixin,
+    mixins.IndexContextMixin, mixins.ViewTypeContextMixin,
+    mixins.DepositAssetsContextMixin, generic.CreateView):
+    form_class = forms.FeedLikeUpdateForm
+    success_url = reverse_lazy('nc:feed-redirect')
+    template_name = "nc/feed_like_update_form.html"
+    view_type = 'feed'
+
+    def get_form_kwargs(self):
+        """
+        Need to override to pass in the request for authenticated user.
+
+        Pop instance key since FeedLikeUpdateForm is not actually a ModelForm.
+        """
+        kwargs = super(FeedLikeUpdateView, self).get_form_kwargs()
+        kwargs.update({
+            'request': self.request,
+            'success_url': self.request.POST.get('success_url')
+        })
+        kwargs.pop('instance')
+        return kwargs
+
 class FeedRewardCreateView(LoginRequiredMixin, mixins.AjaxableResponseMixin,
-    mixins.IndexContextMixin, mixins.ViewTypeContextMixin, generic.CreateView):
+    mixins.IndexContextMixin, mixins.ViewTypeContextMixin,
+    mixins.DepositAssetsContextMixin, generic.CreateView):
     form_class = forms.FeedRewardCreateForm
     success_url = reverse_lazy('nc:feed-redirect')
     template_name = "nc/feed_reward_form.html"
@@ -1783,7 +1849,8 @@ class SendRedirectView(LoginRequiredMixin, generic.RedirectView):
     pattern_name = 'nc:send-detail'
 
 class SendDetailView(LoginRequiredMixin, mixins.IndexContextMixin,
-    mixins.ViewTypeContextMixin, mixins.ActivityFormContextMixin, generic.TemplateView):
+    mixins.ViewTypeContextMixin, mixins.ActivityFormContextMixin,
+    mixins.DepositAssetsContextMixin, generic.TemplateView):
     template_name = "nc/send.html"
     view_type = 'send'
 
@@ -1794,10 +1861,61 @@ class ReceiveRedirectView(LoginRequiredMixin, generic.RedirectView):
     pattern_name = 'nc:receive-detail'
 
 class ReceiveDetailView(LoginRequiredMixin, mixins.IndexContextMixin,
-    mixins.ViewTypeContextMixin, mixins.ActivityFormContextMixin, generic.TemplateView):
+    mixins.ViewTypeContextMixin, mixins.ActivityFormContextMixin,
+    mixins.DepositAssetsContextMixin, generic.TemplateView):
     template_name = "nc/receive.html"
     view_type = 'receive'
 
+
+## Dashboard
+class DashboardView(LoginRequiredMixin, mixins.IndexContextMixin,
+    mixins.ViewTypeContextMixin, mixins.LoginRedirectContextMixin,
+    mixins.ActivityFormContextMixin, mixins.FeedActivityContextMixin,
+    mixins.DepositAssetsContextMixin, mixins.PostFormContextMixin,
+    mixins.UserPortfolioContextMixin, generic.TemplateView):
+    feed_type = settings.STREAM_TIMELINE_FEED
+    template_name = "nc/dashboard.html"
+    user_field = 'request.user'
+    view_type = 'feed'
+
+    def get_context_data(self, **kwargs):
+        """
+        Include context data from LeaderboardListView and AssetTopListView.
+        """
+        context = super(DashboardView, self).get_context_data(**kwargs)
+
+        # Add leaderboard view items
+        leaderboard_view = LeaderboardListView()
+        leaderboard_view.request = self.request
+        leaderboard_view.object_list = leaderboard_view.get_queryset()[:5]
+
+        # Store the allowed leaderboard context
+        context.update({
+            'leaderboard_page_obj': leaderboard_view.object_list,
+            'leaderboard_allowed_displays': [ 'usd_value', 'performance_{0}'.format(leaderboard_view.date_span) ],
+            'leaderboard_display': 'performance_{0}'.format(leaderboard_view.date_span),
+            'leaderboard_date_span': leaderboard_view.date_span,
+            'leaderboard_allowed_date_orderings': leaderboard_view.allowed_date_orderings,
+
+        })
+
+        # Add top asset view items
+        asset_top_view = AssetTopListView()
+        asset_top_view.request = self.request
+        asset_top_view.object_list = asset_top_view.get_queryset()[:5]
+
+        # Store the top asset context
+        context.update({
+            'asset_top_page_obj': asset_top_view.object_list,
+            'asset_top_allowed_displays': asset_top_view.allowed_displays,
+            'asset_top_display': asset_top_view.display,
+            'asset_top_counter_code': asset_top_view.counter_code,
+            'asset_top_order_by': asset_top_view.order_by,
+            'asset_top_ticker_assets': asset_top_view.ticker_assets,
+        })
+
+        # Return the full context
+        return context
 
 # TODO: For way later down the line in the roadmap.
 # Refactor this so it's in a separate 'api' Django app

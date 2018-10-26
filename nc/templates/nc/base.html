@@ -15,7 +15,8 @@
   <nav class="navbar navbar-top navbar-dark fixed-top flex-nowrap p-0">
     <div class="d-inline-flex flex-auto">
       <a href="{% url 'home' %}" class="navbar-brand col-sm-3 col-md-2 mr-0">
-        <img src="{% static 'nc/images/logo_transparent_text-align-left.png' %}" alt="" width="auto" height="25">
+        <img src="{% static 'nc/images/logo_transparent_text-align-left.png' %}" class="d-none d-md-inline-block" alt="" width="auto" height="25">
+        <img src="{% static 'nc/images/logo_short.png' %}" class="d-md-none d-inline-block" alt="" width="auto" height="25">
       </a>
     </div>
 
@@ -38,71 +39,100 @@
       </div>
     </div>
 
-    <div class="btn-group pr-2">
+    <div class="btn-group px-2 align-items-center">
       {% if request.user.is_authenticated %}
-      <a href="{% url 'nc:user-redirect' %}" class="btn btn-dark navbar-btn">
-        {% with request.user.profile as profile %}
-        <img class="rounded img-object-fit-cover bg-white" style="height: 30px; width: 30px;"{% if profile and profile.pic %} src="{{ profile.pic.url }}"{% else %} src="{% static 'nc/images/profile.png' %}"{% endif %} alt="">
-        {% endwith %}
+      <div class="dropdown">
+        <a href="#" title="Funding" class="btn btn-dark navbar-btn px-2" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          <span data-feather="dollar-sign"></span>
+          <small class="d-none d-md-inline-block">Funding</small>
+          <span class="sr-only">Toggle Dropdown</span>
+        </a>
+        <div class="dropdown-menu dropdown-menu-right" style="right: 0; left: auto; margin-right: 13px;">
+          <h6 class="dropdown-header"><span data-feather="dollar-sign"></span>Funding</h6>
+          <div class="dropdown-divider"></div>
+          <a class="dropdown-item" data-toggle="modal" href="#depositFundsModal">
+            <span data-feather="download"></span>
+            Deposit
+          </a>
+          <!--
+          <a class="dropdown-item" data-toggle="modal" href="#withdrawFundsModal">
+            <span data-feather="upload"></span>
+            Withdraw
+          </a>
+          -->
+        </div>
+      </div>
+      <a href="{% url 'nc:send-redirect' %}" title="Payments" class="btn btn-dark navbar-btn px-2">
+        <span data-feather="send"></span>
+        <small class="d-none d-md-inline-block">Payments</small>
       </a>
-      <button type="button" class="btn btn-dark navbar-btn dropdown-toggle dropdown-toggle-split" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-        <span class="sr-only">Toggle Dropdown</span>
-      </button>
-      <div class="dropdown-menu dropdown-menu-right" style="right: 0; left: auto; margin-right: 17px;">
-        <h6 class="dropdown-header">@{{ request.user.username }}</h6>
-        {% with request.user.profile.portfolio.rawdata.first as portfolio_latest_rawdata %}
-        {% if portfolio_latest_rawdata and portfolio_latest_rawdata.usd_value > 0 %}
-        <strong class="dropdown-header text-dark py-0">
-          ${{ portfolio_latest_rawdata.usd_value|floatformat:2|intcomma }}
-        </strong>
-        {% endif %}
-        {% endwith %}
-        <div class="dropdown-divider"></div>
-        <a class="dropdown-item" href="{% url 'nc:feed-redirect' %}">
-          <span data-feather="activity"></span>
-          Activity
-        </a>
-        <a class="dropdown-item" href="{% url 'nc:leaderboard-redirect' %}">
-          <span data-feather="award"></span>
-          Leaderboard
-        </a>
-        <a class="dropdown-item" href="{% url 'nc:trade-redirect' %}">
-          <span data-feather="trending-up"></span>
-          Trade
-        </a>
-        <a class="dropdown-item" href="{% url 'nc:send-redirect' %}">
-          <span data-feather="send"></span>
-          Send/Receive
-        </a>
-        <a class="dropdown-item" href="{% url 'nc:user-redirect' %}">
-          <span data-feather="user"></span>
-          Profile
-        </a>
-        <div class="dropdown-divider"></div>
-        <a class="dropdown-item" href="{% url 'nc:user-settings-redirect' %}">
-          <span data-feather="settings"></span>
-          Settings
-        </a>
-        <a class="dropdown-item" href="{% url 'account_logout' %}">
-          Sign out
-        </a>
+      <div class="dropdown">
+        <button type="button" class="btn btn-dark navbar-btn dropdown-toggle dropdown-toggle-split" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          <span class="sr-only">Toggle Dropdown</span>
+        </button>
+        <div class="dropdown-menu dropdown-menu-right" style="right: 0; left: auto; margin-right: 13px;">
+          <h6 class="dropdown-header">@{{ request.user.username }}</h6>
+          {% with request.user.profile.portfolio.rawdata.first as portfolio_latest_rawdata %}
+          {% if portfolio_latest_rawdata and portfolio_latest_rawdata.usd_value > 0 %}
+          <strong class="dropdown-header text-dark py-0">
+            ${{ portfolio_latest_rawdata.usd_value|floatformat:2|intcomma }}
+          </strong>
+          {% endif %}
+          {% endwith %}
+          <div class="dropdown-divider"></div>
+          <a class="dropdown-item" href="{% url 'nc:dashboard' %}">
+            <span data-feather="grid"></span>
+            Dashboard
+          </a>
+          <a class="dropdown-item" href="{% url 'nc:account-redirect' %}">
+            <img class="feather" src="{% static 'nc/images/wallet_dark.png' %}">
+            Accounts
+          </a>
+          <a class="dropdown-item" href="{% url 'nc:user-redirect' %}">
+            <span data-feather="user"></span>
+            Profile
+          </a>
+          <div class="dropdown-divider"></div>
+          <a class="dropdown-item" href="">
+            <span data-feather="dollar-sign"></span>
+            Funding
+          </a>
+          <a class="dropdown-item" href="{% url 'nc:send-redirect' %}">
+            <span data-feather="send"></span>
+            Payments
+          </a>
+          <a class="dropdown-item" href="">
+            <span data-feather="bell"></span>
+            Alerts
+          </a>
+          <div class="dropdown-divider"></div>
+          <a class="dropdown-item" href="{% url 'nc:user-settings-redirect' %}">
+            <span data-feather="settings"></span>
+            Settings
+          </a>
+          <a class="dropdown-item" href="{% url 'account_logout' %}">
+            Sign out
+          </a>
+        </div>
       </div>
       {% else %}
-      <button type="button" class="btn btn-dark navbar-btn dropdown-toggle dropdown-toggle-split" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-        <span class="sr-only">Toggle Dropdown</span>
-      </button>
-      <div class="dropdown-menu dropdown-menu-right" style="right: 0; left: auto; margin-right: 17px;">
-        <a class="dropdown-item" href="{% url 'nc:leaderboard-redirect' %}">
-          <span data-feather="award"></span>
-          Leaderboard
-        </a>
-        <a class="dropdown-item" href="{% url 'nc:trade-redirect' %}">
-          <span data-feather="trending-up"></span>
-          Trade
-        </a>
-        <div class="dropdown-divider"></div>
-        <a class="dropdown-item" href="{{ login_redirect }}">Log in</a>
-        <a class="dropdown-item" href="{% url 'account_signup' %}">Sign up</a>
+      <div class="dropdown">
+        <button type="button" class="btn btn-dark navbar-btn dropdown-toggle dropdown-toggle-split" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          <span class="sr-only">Toggle Dropdown</span>
+        </button>
+        <div class="dropdown-menu dropdown-menu-right">
+          <a class="dropdown-item" href="{% url 'nc:leaderboard-redirect' %}">
+            <span data-feather="award"></span>
+            Leaderboard
+          </a>
+          <a class="dropdown-item" href="{% url 'nc:trade-redirect' %}">
+            <span data-feather="trending-up"></span>
+            Trade
+          </a>
+          <div class="dropdown-divider"></div>
+          <a class="dropdown-item" href="{{ login_redirect }}">Log in</a>
+          <a class="dropdown-item" href="{% url 'account_signup' %}">Sign up</a>
+        </div>
       </div>
       {% endif %}
     </div>
@@ -114,31 +144,19 @@
         <div class="">
           <ul class="nav flex-row">
             <li class="nav-item">
-              <a {% if view_type == 'feed' %}class="nav-link active"{% else %}class="nav-link"{% endif %} href="{% url 'nc:feed-redirect' %}">
-                <span data-feather="activity"></span>
-                <span class="d-none d-md-inline-block">Activity{% if view_type == 'feed' %} <span class="sr-only">(current)</span>{% endif %}</span>
+              <a {% if view_type == 'feed' or view_type == 'leaderboard' or view_type == 'asset' or view_type == 'profile' and object.id != request.user.id %}class="nav-link active"{% else %}class="nav-link"{% endif %} href="{% url 'nc:dashboard' %}" title="Dashboard">
+                <span data-feather="grid"></span>
+                <span class="d-none d-md-inline-block">Dashboard{% if view_type == 'feed' or view_type == 'leaderboard' or view_type == 'asset' %} <span class="sr-only">(current)</span>{% endif %}</span>
               </a>
             </li>
             <li class="nav-item">
-              <a {% if view_type == 'leaderboard' %}class="nav-link active"{% else %}class="nav-link"{% endif %} href="{% url 'nc:leaderboard-redirect' %}">
-                <span data-feather="award"></span>
-                <span class="d-none d-md-inline-block">Leaderboard{% if view_type == 'leaderboard' %} <span class="sr-only">(current)</span>{% endif %}</span>
+              <a {% if view_type == 'account' %}class="nav-link active"{% else %}class="nav-link"{% endif %} href="{% url 'nc:account-redirect' %}" title="Accounts">
+                <img class="feather" {% if view_type == 'account' %}src="{% static 'nc/images/wallet_primary.png' %}"{% else %}src="{% static 'nc/images/wallet_dark.png' %}"{% endif %}>
+                <span class="d-none d-md-inline-block">Accounts{% if view_type == 'account' %} <span class="sr-only">(current)</span>{% endif %}</span>
               </a>
             </li>
             <li class="nav-item">
-              <a {% if view_type == 'asset' %}class="nav-link active"{% else %}class="nav-link"{% endif %} href="{% url 'nc:trade-redirect' %}">
-                <span data-feather="trending-up"></span>
-                <span class="d-none d-md-inline-block">Trade{% if view_type == 'asset' %} <span class="sr-only">(current)</span>{% endif %}</span>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a {% if view_type == 'send' %}class="nav-link active"{% else %}class="nav-link"{% endif %} href="{% url 'nc:send-redirect' %}">
-                <span data-feather="send"></span>
-                <span class="d-none d-md-inline-block">Send/Receive{% if view_type == 'send' %} <span class="sr-only">(current)</span>{% endif %}</span>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a {% if view_type == 'profile' %}class="nav-link active"{% else %}class="nav-link"{% endif %} href="{% url 'nc:user-redirect' %}">
+              <a {% if view_type == 'profile' and object.id == request.user.id %}class="nav-link active"{% else %}class="nav-link"{% endif %} href="{% url 'nc:user-redirect' %}" title="Profile">
                 <span data-feather="user"></span>
                 <span class="d-none d-md-inline-block">Profile{% if view_type == 'profile' %} <span class="sr-only">(current)</span>{% endif %}</span>
               </a>
@@ -147,10 +165,83 @@
         </div>
       </nav>
 
-      <main role="main" class="col-md-9 m-auto col-lg-10 px-sm-4 pb-4">
+      <main role="main" class="col-md-9 m-auto col-lg-10 pb-4">
       {% block main %}
       {% endblock %}
       </main>
+
+      {% if request.user.is_authenticated %}
+      <!-- Deposit funds modal -->
+      <div class="modal fade" id="depositFundsModal" tabindex="-1" role="dialog" aria-labelledby="depositFundsModalTitle" aria-hidden="true">
+        <form method="POST" id="depositFundsModalForm">
+          {% csrf_token %}
+          <div class="modal-dialog" role="document">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="depositFundsModalTitle">Deposit Funds To Stellar</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                  <span aria-hidden="true">&times;</span>
+                </button>
+              </div>
+              <div class="modal-body">
+                <h5 id="depositFundsModalHeader" class="pt-1 mb-3 modal-body-header">Please select an asset type and a Stellar account to receive deposit</h5>
+                <div class="form-group">
+                  <label for="depositFundsModalAssetSelect">Asset type</label>
+                  <select class="custom-select" id="depositFundsModalAssetSelect" name="asset" required="">
+                    <option value="">Choose...</option>
+                    {% for a in deposit_assets %}
+                    <option value="{{ a.asset_id }}" data-code="{{ a.code }}" data-issuer="{{ a.issuer_address }}">{{ a.code }}</option>
+                    {% endfor %}
+                  </select>
+                  <div class="invalid-feedback">
+                    Please select a valid asset.
+                  </div>
+                  {% for a in deposit_assets %}
+                  <div class="deposit-asset d-none py-3" data-asset_id="{{ a.asset_id }}">
+                    <label class="text-muted">Stellar asset to be deposited</label>
+                    <div class="d-flex flex-wrap justify-content-start align-items-center border-0">
+                      <img class="img-object-fit-cover img-thumbnail rounded-circle" style="height: 60px; width: 60px;" src="{{ a.pic_url }}" alt="">
+                      <div class="ml-2 d-flex flex-column align-items-start justify-content-center">
+                        <strong>{{ a.code }}</strong>
+                        <span class="text-secondary">{{ a.domain }}</span>
+                        <small class="text-muted" style="font-size: 0.6em">Issuer: {{ a.issuer_address }}</small>
+                      </div>
+                    </div>
+                  </div>
+                  {% endfor %}
+                </div>
+                <div class="form-group">
+                  <label for="depositFundsModalAccountSelect">Stellar account</label>
+                  <select class="custom-select" id="depositFundsModalAccountSelect" name="account" required="">
+                    <option value="">Choose account...</option>
+                    {% for acc in request.user.accounts.all %}
+                    <option value="{{ acc.public_key }}">{% if acc.name %}{{ acc.name }} {% endif %}({{ acc.public_key|truncatechars:10 }}{{ acc.public_key|slice:"-7:" }})</option>
+                    {% endfor %}
+                  </select>
+                  <small><a href="{% url 'nc:user-detail' request.user.username %}#accounts">Add a Stellar account</a></small>
+                  <div class="invalid-feedback">
+                    Please select a valid account.
+                  </div>
+                </div>
+              </div>
+              <div class="modal-body py-0">
+                <div class="mb-3 d-inline-flex justify-content-start align-items-center">
+                  <img class="img-object-fit-cover img-thumbnail rounded flex-auto" style="height: 50px; width: 50px;" src="{% static 'nc/images/papaya.png' %}" alt="">
+                  <div class="ml-2 d-flex flex-column align-items-start justify-content-center">
+                    <strong>Powered by Papaya</strong>
+                    <a href="https://apay.io" target="_blank" class="text-secondary">apay.io</a>
+                  </div>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button type="submit" class="btn btn-primary ladda-button" data-style="expand-left" data-size="s" {% if request.user.accounts.count == 0 %}disabled{% endif %}><span class="ladda-label">Get External Address</span></button>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+      {% endif %}
     </div>
   </div>
 </body>
@@ -251,6 +342,15 @@ $('.btn-clipboard[data-toggle="tooltip"]').on('click', function(e) {
 </script>
 {% endverbatim %}
 <script src="{% static 'nc/scripts/search.js' %}"></script>
+<script>
+  const PAPAYA_API_DEPOSIT_URL = "{{ papaya_api_deposit_url }}",
+        PAPAYA_ASSET_TRUST_LINKS = {
+          {% for a in deposit_assets %}
+          {{ a.code }}: "{% url 'nc:asset-trust-list' a.asset_id %}",
+          {% endfor %}
+        };
+</script>
+<script src="{% static 'nc/scripts/deposit.js' %}"></script>
 {% block nc_script %}
 {% endblock %}
 {% endblock %}

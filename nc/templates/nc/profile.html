@@ -40,19 +40,8 @@
       </div>
       <div class="d-flex flex-wrap justify-content-between align-items-end">
         <div class="py-1 d-flex flex-column align-items-start justify-content-center">
+          {% if object.id != request.user.id %}
           <div class="">
-            {% if object.id == request.user.id %}
-            {% if num_addresses > 0 %}
-            <button type="button" class="btn btn-sm btn-dark" data-toggle="modal" data-target="#depositFundsModal">
-              <span data-feather="download"></span>
-              Deposit
-            </button>
-            <button type="button" class="btn btn-sm btn-light" data-toggle="modal" data-target="#">
-              <span data-feather="upload"></span>
-              Withdraw
-            </button>
-            {% endif %}
-            {% else %}
             <form method="POST" action="{% url 'nc:user-follow' object.username %}">
             {% csrf_token %}
             {% if is_following %}
@@ -76,8 +65,8 @@
               Send
             </a>
             </form>
-            {% endif %}
           </div>
+          {% endif %}
           <div class="d-flex flex-column justify-content-start align-items-start text-muted mt-3">
             {% if object.id != request.user.id and followers_user_follows_teaser_count > 0 %}
             <small class="pb-1">
@@ -167,7 +156,7 @@
   {% endif %}
 </div>
 
-<div class="card box-shadow">
+<div class="card box-shadow mb-4">
   <div class="card-body bg-dark text-center">
     <div id="carouselIndicators" class="carousel slide px-3" data-ride="carousel">
       <div class="carousel-inner">
@@ -434,77 +423,6 @@
   </form>
 </div>
 
-<!-- Deposit funds modal -->
-<div class="modal fade" id="depositFundsModal" tabindex="-1" role="dialog" aria-labelledby="depositFundsModalTitle" aria-hidden="true">
-  <form method="POST" id="depositFundsModalForm">
-    {% csrf_token %}
-    <div class="modal-dialog" role="document">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="depositFundsModalTitle">Deposit Funds To Stellar</h5>
-          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-            <span aria-hidden="true">&times;</span>
-          </button>
-        </div>
-        <div class="modal-body">
-          <h5 id="depositFundsModalHeader" class="pt-1 mb-3 modal-body-header">Please select an asset type and a Stellar account to receive deposit</h5>
-          <div class="form-group">
-            <label for="depositFundsModalAssetSelect">Asset type</label>
-            <select class="custom-select" id="depositFundsModalAssetSelect" name="asset" required="">
-              <option value="">Choose...</option>
-              {% for a in deposit_assets %}
-              <option value="{{ a.asset_id }}" data-code="{{ a.code }}" data-issuer="{{ a.issuer_address }}">{{ a.code }}</option>
-              {% endfor %}
-            </select>
-            <div class="invalid-feedback">
-              Please select a valid asset.
-            </div>
-            {% for a in deposit_assets %}
-            <div class="deposit-asset d-none py-3" data-asset_id="{{ a.asset_id }}">
-              <label class="text-muted">Stellar asset to be deposited</label>
-              <div class="d-flex flex-wrap justify-content-start align-items-center border-0">
-                <img class="img-object-fit-cover img-thumbnail rounded-circle" style="height: 60px; width: 60px;" src="{{ a.pic_url }}" alt="">
-                <div class="ml-2 d-flex flex-column align-items-start justify-content-center">
-                  <strong>{{ a.code }}</strong>
-                  <span class="text-secondary">{{ a.domain }}</span>
-                  <small class="text-muted" style="font-size: 0.6em">Issuer: {{ a.issuer_address }}</small>
-                </div>
-              </div>
-            </div>
-            {% endfor %}
-          </div>
-          <div class="form-group">
-            <label for="depositFundsModalAccountSelect">Stellar account</label>
-            <select class="custom-select" id="depositFundsModalAccountSelect" name="account" required="">
-              <option value="">Choose...</option>
-              {% for acc in request.user.accounts.all %}
-              <option value="{{ acc.public_key }}">{% if acc.name %}{{ acc.name }} {% endif %}({{ acc.public_key|truncatechars:10 }}{{ acc.public_key|slice:"-7:" }})</option>
-              {% endfor %}
-            </select>
-            <small><a href="{% url 'nc:user-detail' request.user.username %}#accounts">Add a Stellar account</a></small>
-            <div class="invalid-feedback">
-              Please select a valid account.
-            </div>
-          </div>
-        </div>
-        <div class="modal-body py-0">
-          <div class="mb-3 d-inline-flex justify-content-start align-items-center">
-            <img class="img-object-fit-cover img-thumbnail rounded flex-auto" style="height: 50px; width: 50px;" src="{% static 'nc/images/papaya.png' %}" alt="">
-            <div class="ml-2 d-flex flex-column align-items-start justify-content-center">
-              <strong>Powered by Papaya</strong>
-              <a href="https://apay.io" target="_blank" class="text-secondary">apay.io</a>
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-          <button type="submit" class="btn btn-primary ladda-button" data-style="expand-left" data-size="s" {% if request.user.accounts.count == 0 %}disabled{% endif %}><span class="ladda-label">Get External Address</span></button>
-        </div>
-      </div>
-    </div>
-  </form>
-</div>
-
 <!-- Activity Tx Hash Form -->
 <form method="POST" id="activityForm" class="d-none" action="{% url 'nc:feed-activity-create' %}">
   {% csrf_token %}
@@ -512,27 +430,28 @@
 </form>
 {% endif %}
 
+
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-0 my-3 border-bottom">
   <h1 id="activity" class="h2">Activity</h1>
 </div>
 
-{% if object.id == request.user.id %}
-<div class="mb-1">
-  <form method="POST" id="postForm" action="{% url 'nc:feed-post-create' %}" data-success="">
-    {% csrf_token %}
-    <div class="input-group">
-      <input class="form-control form-control-lg" type="text" name="message" maxlength="255" placeholder="What crypto's on your mind?" required>
-      <div class="input-group-append">
-        <button type="submit" class="btn btn-sm btn-primary ladda-button" data-style="expand-left" data-size="xs"><span class="ladda-label"><span data-feather="edit-2"></span></span></button>
-      </div>
-    </div>
-  </form>
-</div>
-{% endif %}
-
 <div class="py-1 mb-3">
   <div class="card card-feed">
-    <div class="card-header border-0"></div>
+    <div class="card-header border-0">
+      {% if object.id == request.user.id %}
+      <div class="mb-1">
+        <form method="POST" id="postForm" action="{% url 'nc:feed-post-create' %}" data-success="">
+          {% csrf_token %}
+          <div class="input-group">
+            <input class="form-control form-control-lg" type="text" name="message" maxlength="255" placeholder="What crypto's on your mind?" required>
+            <div class="input-group-append">
+              <button type="submit" class="btn btn-sm btn-primary ladda-button" data-style="expand-left" data-size="xs"><span class="ladda-label"><span data-feather="edit-2"></span></span></button>
+            </div>
+          </div>
+        </form>
+      </div>
+      {% endif %}
+    </div>
     <div class="card-body p-0">
       <ul id="activityList" class="list-group">
       </ul>
@@ -543,255 +462,29 @@
   </div>
 </div>
 
-
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-0 mb-3 border-bottom">
-  <h1 id="accounts" class="h2">Accounts</h1>
-  {% if object.id == request.user.id %}
-  <div>
-    <button type="button" class="btn btn-sm btn-secondary" data-toggle="modal" data-target="#addStellarModal">Add</button>
-    <button type="button" class="btn btn-sm btn-primary" data-toggle="modal" data-target="#createStellarModal">Create</button>
-  </div>
-  {% endif %}
-</div>
-
-<div id="accordion" class="py-1">
-  {% for account in object.accounts.all %}
-  <div class="card mb-2">
-    <div class="card-header bg-white" id="heading-{{ forloop.counter0 }}">
-      {% if object.id == request.user.id %}
-      <a href="{% url 'nc:account-update' account.public_key %}" class="btn btn-sm btn-outline-secondary float-right">
-        <span data-feather="edit"></span>
-        Edit Account
-      </a>
-      {% elif is_following %}
-      <!-- TODO:
-      <a href="#" class="btn btn-sm btn-outline-primary float-right">
-        <span data-feather="copy"></span>
-        Mirror Assets
-      </a>-->
-      {% endif %}
-
-      {# TODO: PUT THE MINIMUM BALANCE SOMEWHERE HERE PLUS ASSET LIMITS! #}
-      {# TODO: SHOW OUTSTANDING ORDERS! #}
-
-      <div class="d-flex justify-content-start flex-wrap align-items-center mb-0 h5">
-        <img class="img-object-fit-cover img-thumbnail"  style="height: 65px; width: 65px;" {% if account.pic %} src="{{ account.pic.url }}"{% else %} src="{% static 'nc/images/account.png' %}"{% endif %} alt="">
-        <button class="btn btn-link" data-toggle="collapse" data-target="#collapse-{{ forloop.counter0 }}" aria-expanded="false" aria-controls="collapse-{{ forloop.counter0 }}">
-          <div class="d-flex flex-column align-items-start justify-content-center">
-            <h3 class="mb-0">{% if account.name %}{{ account.name }}{% else %}&nbsp;{% endif %}</h3>
-            <small class="mb-1 text-muted">{{ account.public_key|truncatechars:13 }}{{ account.public_key|slice:"-10:" }}</small>
-          </div>
-        </button>
-      </div>
-    </div>
-    <div id="collapse-{{ forloop.counter0 }}" class="collapse account" aria-labelledby="heading-{{ forloop.counter0 }}" data-parent="#accordion" data-more="#more-{{ forloop.counter0 }}">
-      <div class="card-body">
-        <strong class="py-1">Public Key:</strong>
-        <h6 class="text-secondary w-100 mt-0 pt-0">
-          <abbr title="Stellar Account Public Key">{{ account.public_key }}</abbr>
-        </h6>
-
-        {% with addresses|get_item:account.public_key as address %}
-        <ul class="list-group mt-4">
-          <strong class="py-1">Assets</strong>
-          {% for asset in address.balances %}
-          <li class="list-group-item d-flex justify-content-between align-items-center">
-            <div class="d-flex justify-content-start align-items-center">
-              {% with asset|get_item:'asset_type' as asset_type %}
-              {% if asset_type == 'native' %}
-              <img class="card-img-top rounded-circle mr-2" src="{% static 'nc/images/rocket.png' %}" style="height: 25px; width: 25px;">
-              <span>XLM</span>
-              {% else %}
-              {% with asset|get_item:'asset_code' as asset_code %}
-              {% with asset|get_item:'asset_issuer' as asset_issuer %}
-              {% with issuers|get_item:asset_issuer as issuer %}
-              {% with issuer.user as user %}
-
-              {% with asset_issuer|create_tuple:asset_code as tu %}
-              {% with model_assets|get_item:tu as model_asset %}
-              {% if model_asset %}
-              <img class="card-img-top rounded-circle mr-2" {% if model_asset.pic %}src="{{ model_asset.pic.url }}"{% elif model_asset.toml_pic %}src="{{ model_asset.toml_pic }}"{% else %}src="{% static 'nc/images/asset.png' %}"{% endif %} style="height: 25px; width: 25px;">
-              {% else %}
-              <img class="card-img-top rounded-circle mr-2" style="height: 25px; width: 25px;" src="{% static 'nc/images/asset.png' %}">
-              {% endif %}
-              {% endwith %}
-              {% endwith %}
-
-              <span>
-                {{ asset_code }}
-                {% if asset_issuer in issuers %}
-                 (Issuer: <a href="{% url 'nc:user-detail' user.username %}">@{{ user.username }}</a>)
-                {% else %}
-                 (Issuer: {{ asset_issuer|truncatechars:8 }}{{ asset_issuer|slice:"-5:" }})
-                {% endif %}
-              </span>
-
-              {% endwith %}
-              {% endwith %}
-              {% endwith %}
-              {% endwith %}
-              {% endif %}
-              {% endwith %}
-            </div>
-            {% with asset|get_item:'balance' as asset_balance %}
-            <strong>{{ asset_balance|intcomma }}</strong>
-            {% endwith %}
-          </li>
-          {% endfor %}
-        </ul>
-        {% endwith %}
-
-        <ul id="operations-{{ forloop.counter0 }}" class="list-group mt-4" data-parent="#collapse-{{ forloop.counter0 }}">
-          <strong class="py-1">Recent Activity</strong>
-          <div id="more-container-{{ forloop.counter0 }}">
-            <button id="more-{{ forloop.counter0 }}" type="button" class="btn btn-sm btn-link account more" data-parent="#more-container-{{ forloop.counter0 }}" data-public_key="{{ account.public_key }}" data-url="{% url 'nc:account-operation-list' account.public_key %}" data-cursor="" data-has_more="true">More</button>
-          </div>
-        </ul>
-      </div>
-    </div>
-  </div>
-  {% endfor %}
-
-  {% for account_request in object.requests_to_fund_account.all %}
-  <div class="card mb-2">
-    <div class="card-header bg-white">
-      <button type="button" class="btn btn-sm btn-outline-secondary float-right" disabled>
-        <span data-feather="loader"></span>
-        Pending
-      </button>
-
-      <div class="d-flex justify-content-start flex-wrap align-items-center mb-0 h5">
-        <img class="img-object-fit-cover img-thumbnail"  style="height: 65px; width: 65px;" {% if account.pic %} src="{{ account.pic.url }}"{% else %} src="{% static 'nc/images/account.png' %}"{% endif %} alt="">
-        <button class="btn btn-link" disabled>
-          <div class="d-flex flex-column align-items-start justify-content-center">
-            <h3 class="mb-0">&nbsp;</h3>
-            <small class="mb-1 text-muted">{{ account_request.public_key|truncatechars:13 }}{{ account_request.public_key|slice:"-10:" }}</small>
-          </div>
-        </button>
-      </div>
-    </div>
-  </div>
-  {% endfor %}
-</div>
-
-{% if object.id == request.user.id %}
-<!-- Add Stellar Account Modal -->
-<div class="modal fade" id="addStellarModal" tabindex="-1" role="dialog" aria-labelledby="addStellarModalTitle" aria-hidden="true">
-  <form method="POST" id="addStellarModalForm">
+<!-- Reward activity modal -->
+<div class="modal fade" id="rewardActivityModal" tabindex="-1" role="dialog" aria-labelledby="rewardActivityModalTitle" aria-hidden="true">
+  <form method="POST" id="rewardActivityModalForm">
     {% csrf_token %}
     <div class="modal-dialog" role="document">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title" id="addStellarModalTitle">Add Stellar Account</h5>
+          <h5 class="modal-title" id="rewardActivityModalTitle">Reward With Lumens</h5>
           <button type="button" class="close" data-dismiss="modal" aria-label="Close">
             <span aria-hidden="true">&times;</span>
           </button>
         </div>
         <div class="modal-body">
-          <h5 id="addStellarModalBodyHeader" class="pt-1 mb-3 modal-body-header">Please enter your secret key to verify account ownership</h5>
-          <div class="input-group">
-            <input id="addStellarModalSecretKey" type="password" name="secret_key" class="form-control" placeholder="Secret Key (example: SBUVRVHRRGNBFYY...)" aria-label="Secret Key">
-            <div class="input-group-append">
-              <button id="addStellarModalLedger" class="btn btn-outline-secondary ledger-button" type="button" name="ledger" data-public_key="" data-parent="#addStellarModalSecretKey" data-alert_ref="#addStellarModalBodyHeader" data-alert_before="false" data-submit_name="Add Account">
-                <img src="{% static 'nc/images/ledger.png' %}" alt="" width="auto" height="16">
-              </button>
-            </div>
-          </div>
-          <div class="text-danger mt-4">
-            <strong>Security Notes</strong>
-            <ul>
-              <li>We do NOT store your secret key. Your secret key is never sent to our servers.</li>
-              <li>Nucleo verifies Stellar account ownership by adding a Data Entry to your Stellar account from the browser. Your secret key is used to sign off on this modification to the Stellar ledger.</li>
-              <li>This added Data Entry contains a cryptographically signed version of your Nucleo user ID (signed with our server keys).</li>
-              <li>Once verified, we associate your Stellar account with your Nucleo profile by storing your Stellar public key.</li>
-            </ul>
-          </div>
+          <h5 id="rewardActivityModalHeader" class="pt-1 mb-3 modal-body-header"></h5>
         </div>
         <div class="modal-footer">
-          <input type="hidden" name="signed_user" value="{{ signed_user }}">
           <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-          <button type="submit" class="btn btn-primary ladda-button" data-style="expand-left" data-size="s"><span class="ladda-label">Add Account</span></button>
+          <button type="submit" class="btn btn-primary ladda-button" data-style="expand-left" data-size="s" {% if request.user.accounts.count == 0 %}disabled{% endif %}><span class="ladda-label">Send Reward</span></button>
         </div>
       </div>
     </div>
   </form>
 </div>
-
-<!-- Create Stellar Account Modal -->
-<div class="modal fade" id="createStellarModal" tabindex="-1" role="dialog" aria-labelledby="createStellarModalTitle" aria-hidden="true">
-  <form method="POST" id="createStellarModalForm">
-    {% csrf_token %}
-    <div class="modal-dialog modal-lg" role="document">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="createStellarModalTitle">Request Funds To Create Stellar Account</h5>
-          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-            <span aria-hidden="true">&times;</span>
-          </button>
-        </div>
-        <div class="modal-body">
-          <h5 id="createStellarModalHeader" class="mb-3">
-            Please <span class="text-primary">store your secret key</span> securely. It will only be shown to you once.
-          </h5>
-
-          <ul class="list-group">
-            <strong class="pb-1 text-primary">Secret Key:</strong>
-            <li class="list-group-item">
-              <h6 class="text-primary w-100 my-0 py-0">
-                <abbr id="createStellarModalSecretKey" title="Stellar Account Secret Key"></abbr>
-              </h6>
-            </li>
-            <strong class="pb-1 pt-3 text-secondary">Public Key:</strong>
-            <li class="list-group-item">
-              <h6 class="text-secondary w-100 my-0 py-0">
-                <abbr id="createStellarModalPublicKey" title="Stellar Account Public Key"></abbr>
-              </h6>
-            </li>
-          </ul>
-
-          <h6 class="mt-3">
-            Your <span class="text-secondary">public key</span> is safe to share.
-          </h6>
-
-          <div class="text-danger mt-4">
-            <strong>Security Notes</strong>
-            <ul>
-              <li>Nucleo reviews requests to fund new Stellar accounts on a case by case basis to avoid spam.</li>
-              <li><strong>Secret Key</strong>:
-                The secret key allows you to access/modify your account and make transactions. DO NOT SHARE IT. Anyone with your secret key will have full access to your account and its funds.
-              </li>
-              <li><strong>Public Key</strong>:
-                The public key identifies your account. It is completely safe to share with others.
-              </li>
-              <li>We do NOT store your secret key. Your secret key is never sent to our servers.</li>
-              <li>If you lose your secret key, you will no longer be able to access your funds. There is no recovery mechanism.</li>
-              <li>Nucleo will not be able to help you recover your secret key if it is lost.</li>
-            </ul>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-          <button type="submit" class="btn btn-primary ladda-button" data-style="expand-left" data-size="s"><span class="ladda-label">Request New Account</span></button>
-        </div>
-      </div>
-    </div>
-  </form>
-</div>
-
-<!-- Add Stellar Account Public Key Form -->
-<form method="POST" id="addStellarPublicKeyForm" class="d-none" action="{% url 'nc:account-create' %}" data-success="{% url 'nc:user-redirect' %}">
-  {% csrf_token %}
-  {{ account_form }}
-</form>
-
-<!-- Create Stellar Account Fund Request Public Key Form -->
-<form method="POST" id="createStellarPublicKeyForm" class="d-none" action="{% url 'nc:account-fund-request-create' %}" data-success="{% url 'nc:user-redirect' %}">
-  {% csrf_token %}
-  {{ account_fund_request_form }}
-</form>
-{% endif %}
-
-
 {% else %}
 <div class="card p-2 mb-1 box-shadow">
   <div class="card-body d-flex flex-column justify-content-between align-items-center">
@@ -805,8 +498,16 @@
 
 {% block nc_script %}
 <script>
-  const IS_CURRENT_USER = {% if object.id == request.user.id %}true{% else %}false{% endif %};
-  const STELLAR_DATA_VERIFICATION_KEY = "{{ verification_key }}";
+  const IS_CURRENT_USER = {% if object.id == request.user.id %}true{% else %}false{% endif %},
+        CURRENT_USER_ID = {% if request.user.is_authenticated %}{{ request.user.id }}{% else %}null{% endif %},
+        STELLAR_DATA_VERIFICATION_KEY = "{{ verification_key }}";
+  {% if object.id == request.user.id %}
+  const CURRENT_USER_PUBLIC_KEYS = [
+    {% for account in object.accounts.all %}
+    "{{ account.public_key }}",
+    {% endfor %}
+  ]
+  {% endif %}
 </script>
 <script src="{% static 'nc/scripts/ticker.js' %}"></script>
 <script src="{% static 'nc/scripts/portfolio_chart.js' %}"></script>
@@ -817,18 +518,10 @@
         STREAM_FEED_ID = "{{ stream_feed_id }}",
         STREAM_FEED_TOKEN = "{{ stream_feed_token }}",
         STREAM_FEED_LISTEN = true,
-        STREAM_FEED_ORDER = "{{ stream_feed_order }}",
+        STREAM_FEED_LIKE_ACTION = "{% url 'nc:feed-like-update' %}",
+        STREAM_FEED_REWARD_ACTION = "{% url 'nc:feed-reward-create' %}",
         STREAM_FEED_LIMIT = 5;
 </script>
 <script src="{% static 'getstream/js/getstream.min.js' %}"></script>
 <script src="{% static 'nc/scripts/feed_activity.js' %}"></script>
-<script>
-  const PAPAYA_API_DEPOSIT_URL = "{{ papaya_api_deposit_url }}",
-        PAPAYA_ASSET_TRUST_LINKS = {
-          {% for a in deposit_assets %}
-          {{ a.code }}: "{% url 'nc:asset-trust-list' a.asset_id %}",
-          {% endfor %}
-        };
-</script>
-<script src="{% static 'nc/scripts/deposit.js' %}"></script>
 {% endblock %}

@@ -15,7 +15,7 @@
 
 {% block main %}
 <div class="mb-2">
-  <a href="{% url 'nc:feed-redirect' %}">Back To Feed</a>
+  <a href="{% url 'nc:dashboard' %}">Back To Dashboard</a>
 </div>
 
 <div class="list-group mb-3">
@@ -55,20 +55,16 @@
         <div><small>Tx #: <a href="{{ activity.tx_href }}" class="text-info" title="Stellar Transaction Hash" target="_blank">{{ activity.tx_hash|truncatechars:10 }}{{ activity.tx_hash|slice:"-7:" }}</a></small></div>
         {% endif %}
         <div class="d-flex flex-row justify-content-start mt-2">
-          <!--TODO: <div class="pr-4"><button {% if activity.liked_by and request.user.id in activity.liked_by %}class="btn btn-link text-danger p-0"{% else %}class="btn btn-link text-dark p-0"{% endif %}><span data-feather="heart"></span><small class="pl-1">{% if activity.likes_count and activity.likes_count > 0 %}{{ activity.likes_count }}{% endif %}</small></button></div>-->
-          <!--TODO: <div class="pr-4"><button {% if activity.rewarded_by and request.user.id in activity.rewarded_by %}class="btn btn-link text-warning p-0"{% else %}class="btn btn-link text-dark p-0"{% endif %}><span data-feather="award"></span><small class="pl-1">{% if activity.rewards_total and activity.rewards_total > 0 %}{{ activity.rewards_total|intword }}{% endif %}</small></button></div>-->
-          <div class="pr-4"><button {% if activity.commented_by and request.user.id in activity.commented_by %}class="btn btn-link text-primary p-0"{% else %}class="btn btn-link text-dark p-0"{% endif %}><span data-feather="message-circle"></span><small class="pl-1">{% if activity.comments_count and activity.comments_count > 0 %}{{ activity.comments_count }}{% endif %}</small></button></div>
+          <div class="pr-4"><button {% if activity.liked_by and request.user.id in activity.liked_by %}class="btn btn-link btn-like text-danger p-0"{% else %}class="btn btn-link btn-like text-dark p-0"{% endif %} data-id="{{ object.id }}" data-activity_id="{{ activity.id }}" data-feed_type="{{ stream_timeline_feed }}" data-likes_count="{{ activity.likes_count }}" data-child="#likesCount"><span data-feather="heart"></span><small class="pl-1">{% if activity.likes_count and activity.likes_count > 0 %}{{ activity.likes_count }}{% endif %}</small></button></div>
+          <!--<div class="pr-4"><button {% if activity.rewarded_by and request.user.id in activity.rewarded_by %}class="btn btn-link text-warning p-0"{% else %}class="btn btn-link text-dark p-0"{% endif %}><span data-feather="award"></span><small class="pl-1">{% if activity.rewards_total and activity.rewards_total > 0 %}{{ activity.rewards_total|intword }}{% endif %}</small></button></div>-->
+          <div class="pr-4"><button {% if activity.commented_by and request.user.id in activity.commented_by %}class="btn btn-link btn-comment text-primary p-0"{% else %}class="btn btn-link btn-comment text-dark p-0"{% endif %}><span data-feather="message-circle"></span><small class="pl-1">{% if activity.comments_count and activity.comments_count > 0 %}{{ activity.comments_count }}{% endif %}</small></button></div>
         </div>
       </div>
     </div>
-    {% with icons|get_item:activity.verb as icon %}
-    <span data-feather={{ icon }}></span>
-    {% endwith %}
   </div>
-  <!-- TODO: Liked by view and rewarded by view for hrefs below -->
   <div class="card-footer border d-flex flex-row">
-    <!--{% if activity.likes_count and activity.likes_count > 0 %}<a href="" class="text-dark pr-2"><small><span class="font-weight-bold">{{ activity.likes_count|intword }}</span> Likes</small></a>{% endif %}-->
-    <!--{% if activity.rewards_total and activity.rewards_total > 0 %}<a href="" class="text-dark pr-2"><small><span class="font-weight-bold">{{ rewards_total|intword }} XLM</span> Rewards</small></a>{% endif %}-->
+    <a id="likesCount" href="" {% if activity.likes_count and activity.likes_count > 0 %}class="text-dark pr-2"{% else %}class="text-dark pr-2 d-none"{% endif %}><small><span class="font-weight-bold count">{{ activity.likes_count|intword }}</span> Like<span {% if activity.likes_count > 1 %}class="plural"{% else %}class="plural d-none"{% endif %}>s</span></small></a>
+    <a id="rewardsTotal" href="" {% if activity.rewards_total and activity.rewards_total > 0 %}class="text-dark pr-2"{% else %}class="text-dark pr-2 d-none"{% endif %}><small><span class="font-weight-bold">{{ rewards_total|intword }} XLM</span> Rewards</small></a>
   </div>
 </div>
 
@@ -96,23 +92,17 @@
   </form>
 </div>
 
-<div class="mb-4">
-  <form method="POST" action="{% url 'nc:feed-comment-update' object.id %}">
-    {% csrf_token %}
-    <div class="input-group">
-      <input class="form-control form-control-lg" type="text" name="message" maxlength="255" placeholder="Add a comment ..." required>
-      <div class="input-group-append">
-        <button type="submit" class="btn btn-sm btn-primary"><span data-feather="edit-2"></span></button>
-      </div>
-    </div>
-  </form>
-</div>
-
 <div class="card card-feed">
-  <div class="card-header border-0 d-flex flex-wrap justify-content-between align-items-center">
-    <div class="mb-1 d-flex flex-column justify-content-between align-items-start">
-      <h5>Comments From Friends</h5>
-    </div>
+  <div class="card-header border-0">
+    <form method="POST" action="{% url 'nc:feed-comment-update' object.id %}">
+      {% csrf_token %}
+      <div class="input-group">
+        <input class="form-control form-control-lg" type="text" name="message" maxlength="255" placeholder="Add a comment ..." required>
+        <div class="input-group-append">
+          <button type="submit" class="btn btn-sm btn-primary"><span data-feather="edit-2"></span></button>
+        </div>
+      </div>
+    </form>
   </div>
   <div class="card-body p-0">
     <ul id="activityList" class="list-group">
@@ -135,6 +125,8 @@
         STREAM_FEED_ID = "{{ stream_feed_id }}",
         STREAM_FEED_TOKEN = "{{ stream_feed_token }}",
         STREAM_FEED_LISTEN = true,
+        STREAM_FEED_LIKE_ACTION = "{% url 'nc:feed-like-update' %}",
+        STREAM_FEED_REWARD_ACTION = "{% url 'nc:feed-reward-create' %}",
         STREAM_FEED_LIMIT = 25;
 </script>
 <script src="{% static 'getstream/js/getstream.min.js' %}"></script>

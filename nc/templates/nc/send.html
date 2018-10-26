@@ -13,6 +13,77 @@
 {% block title %}Send/Receive Payment | Nucleo{% endblock %}
 
 {% block main %}
+<!-- Deposit funds modal -->
+<div class="modal fade" id="depositFundsModal" tabindex="-1" role="dialog" aria-labelledby="depositFundsModalTitle" aria-hidden="true">
+  <form method="POST" id="depositFundsModalForm">
+    {% csrf_token %}
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="depositFundsModalTitle">Deposit Funds To Stellar</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <h5 id="depositFundsModalHeader" class="pt-1 mb-3 modal-body-header">Please select an asset type and a Stellar account to receive deposit</h5>
+          <div class="form-group">
+            <label for="depositFundsModalAssetSelect">Asset type</label>
+            <select class="custom-select" id="depositFundsModalAssetSelect" name="asset" required="">
+              <option value="">Choose...</option>
+              {% for a in deposit_assets %}
+              <option value="{{ a.asset_id }}" data-code="{{ a.code }}" data-issuer="{{ a.issuer_address }}">{{ a.code }}</option>
+              {% endfor %}
+            </select>
+            <div class="invalid-feedback">
+              Please select a valid asset.
+            </div>
+            {% for a in deposit_assets %}
+            <div class="deposit-asset d-none py-3" data-asset_id="{{ a.asset_id }}">
+              <label class="text-muted">Stellar asset to be deposited</label>
+              <div class="d-flex flex-wrap justify-content-start align-items-center border-0">
+                <img class="img-object-fit-cover img-thumbnail rounded-circle" style="height: 60px; width: 60px;" src="{{ a.pic_url }}" alt="">
+                <div class="ml-2 d-flex flex-column align-items-start justify-content-center">
+                  <strong>{{ a.code }}</strong>
+                  <span class="text-secondary">{{ a.domain }}</span>
+                  <small class="text-muted" style="font-size: 0.6em">Issuer: {{ a.issuer_address }}</small>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          <div class="form-group">
+            <label for="depositFundsModalAccountSelect">Stellar account</label>
+            <select class="custom-select" id="depositFundsModalAccountSelect" name="account" required="">
+              <option value="">Choose...</option>
+              {% for acc in request.user.accounts.all %}
+              <option value="{{ acc.public_key }}">{% if acc.name %}{{ acc.name }} {% endif %}({{ acc.public_key|truncatechars:10 }}{{ acc.public_key|slice:"-7:" }})</option>
+              {% endfor %}
+            </select>
+            <small><a href="{% url 'nc:user-detail' request.user.username %}#accounts">Add a Stellar account</a></small>
+            <div class="invalid-feedback">
+              Please select a valid account.
+            </div>
+          </div>
+        </div>
+        <div class="modal-body py-0">
+          <div class="mb-3 d-inline-flex justify-content-start align-items-center">
+            <img class="img-object-fit-cover img-thumbnail rounded flex-auto" style="height: 50px; width: 50px;" src="{% static 'nc/images/papaya.png' %}" alt="">
+            <div class="ml-2 d-flex flex-column align-items-start justify-content-center">
+              <strong>Powered by Papaya</strong>
+              <a href="https://apay.io" target="_blank" class="text-secondary">apay.io</a>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+          <button type="submit" class="btn btn-primary ladda-button" data-style="expand-left" data-size="s" {% if request.user.accounts.count == 0 %}disabled{% endif %}><span class="ladda-label">Get External Address</span></button>
+        </div>
+      </div>
+    </div>
+  </form>
+</div>
+
 <div class="card bg-white rounded box-shadow mb-4">
   <div class="card-header d-flex flex-column justify-content-between align-items-start">
     <h5>Send Payment</h5>
@@ -85,36 +156,6 @@
         <button type="submit" class="btn btn-primary ladda-button" data-style="expand-left" data-size="s"><span class="ladda-label">Send</span></button>
       </div>
     </form>
-  </div>
-</div>
-
-<div class="card card-receive mb-4">
-  <div class="card-header border-0 d-flex flex-column justify-content-between align-items-start">
-    <h5>Your Accounts To Receive Payment</h5>
-    <span class="text-secondary">Give your public keys to your friends so they can send you crypto.</span>
-  </div>
-  <div class="card-body p-0">
-    <div class="list-group">
-      {% for acc in user.accounts.all %}
-      <div class="list-group-item d-flex justify-content-between align-items-center">
-        <div class="d-inline-flex justify-content-start align-items-center">
-          <img class="img-object-fit-cover img-thumbnail rounded flex-auto" style="height: 65px; width: 65px;"{% if acc.pic %} src="{{ acc.pic.url }}"{% else %} src="{% static 'nc/images/account.png' %}"{% endif %} alt="">
-          <div class="ml-3 d-flex flex-column flex-wrap align-items-start justify-content-center">
-            <strong>{% if acc.name %}{{ acc.name }}{% else %}&nbsp;{% endif %}</strong>
-            <div class="font-italic">Public Key:</div>
-            <div class="btn-group" role="group">
-              <button class="btn btn-light btn-clipboard" title="Copied!" data-toggle="tooltip" data-placement="top" data-trigger="click" data-clipboard-text="{{ acc.public_key }}">
-                <span data-feather="copy"></span>
-              </button>
-              <button value="{{ acc.public_key }}" title="Stellar Account Public Key" class="btn btn-sm btn-light font-weight-bold">
-                {{ acc.public_key|truncatechars:10 }}{{ acc.public_key|slice:"-7:" }}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-      {% endfor %}
-    </div>
   </div>
 </div>
 

@@ -449,7 +449,7 @@ class FeedActivityCreateForm(forms.Form):
     Form to add new activity to request.user's feed.
 
     NOTE: This is for Stellar transactions only! See
-    FeedPostCreateForm/FeedCommentCreateForm for adding posts/comments
+    FeedPostCreateForm/FeedCommentUpdateForm for adding posts/comments
     to activity feeds.
     """
     tx_hash = forms.CharField(max_length=64)
@@ -748,6 +748,7 @@ class FeedActivityCreateForm(forms.Form):
             # the offer_type is the non-XLM side.
             # TODO: Generalize for non XLM related offers
             offer_type = 'buying' if record['buying_asset_type'] != 'native' else 'selling'
+            offer_type_title = 'Buying' if offer_type == 'buying' else 'Selling'
 
             # Get account for issuer and either retrieve or create new asset in our db
             asset, created = Asset.objects.get_or_create(
@@ -759,6 +760,7 @@ class FeedActivityCreateForm(forms.Form):
             kwargs.update({
                 'verb': 'offer',
                 'offer_type': offer_type,
+                'offer_type_title': offer_type_title,
                 'amount': record['amount'],
                 'price': record['price'],
                 'object': asset.id,
@@ -930,8 +932,7 @@ class FeedCommentUpdateForm(forms.Form):
         # TODO: separate out into mentions and just full on post
         recipient_list = [ u.email for u in self.activity.commented_by\
             .filter(profile__allow_comment_email=True).exclude(id=self.request_user.id) ]
-        if activity_user != self.request_user:
-            recipient_list.append(activity_user.email)
+        recipient_list.append(activity_user.email)
         activity_path = reverse('nc:feed-activity-detail', kwargs={'pk': self.activity.id})
         activity_url = build_absolute_uri(self.request, activity_path)
         email_settings_path = reverse('nc:user-settings-redirect')
@@ -951,6 +952,90 @@ class FeedCommentUpdateForm(forms.Form):
         return { 'success_url': self.success_url, 'instance': instance }
 
 
+class FeedLikeUpdateForm(forms.Form):
+    """
+    Form to toggle like/not like status of given feed item from request.user.
+
+    Pass in stream activity id of the feed item request.user rewarded.
+    """
+    activity_id = forms.CharField(max_length=36)
+    feed_type = forms.ChoiceField(choices=[
+        (settings.STREAM_USER_FEED, settings.STREAM_USER_FEED.title()),
+        (settings.STREAM_TIMELINE_FEED, settings.STREAM_TIMELINE_FEED.title()),
+        (settings.STREAM_ACTIVITY_FEED, settings.STREAM_ACTIVITY_FEED.title())
+    ])
+
+    def __init__(self, *args, **kwargs):
+        """
+        Override __init__ to store authenticated user
+        """
+        self.request = kwargs.pop('request', None)
+        self.request_user = self.request.user if self.request else None
+        self.success_url = kwargs.pop('success_url', None)
+        super(FeedLikeUpdateForm, self).__init__(*args, **kwargs)
+
+    def clean(self):
+        """
+        Override to verify feed item exists in our system.
+        """
+        # Call the super
+        super(FeedLikeUpdateForm, self).clean()
+
+        # Obtain form input parameter
+        activity_id = self.cleaned_data.get("activity_id")
+        feed_type = self.cleaned_data.get("feed_type")
+
+        # Get the feed item being liked
+        if feed_type == settings.STREAM_TIMELINE_FEED or feed_type == settings.STREAM_USER_FEED:
+            self.model_cls = Activity
+        elif feed_type == settings.STREAM_ACTIVITY_FEED:
+            self.model_cls = Comment
+        else:
+            raise ValidationError(_('Invalid feed type.'), code='invalid_feed_type')
+
+        # Get the feed item by activity_id
+        try:
+            self.feed_item = self.model_cls.objects.get(activity_id=activity_id)
+        except ObjectDoesNotExist:
+            raise ValidationError(_('Invalid activity id. No feed item exists for that id and feed type combination.'), code='invalid_activity_id')
+
+        return self.cleaned_data
+
+    def save(self):
+        """
+        Call get_adapter(request).like_feed_item() or
+        get_adapter(request).unlike_feed_item() depending on toggle status.
+        """
+        # Determine toggle state to know whether change to liking/not liking
+        self.adapter = get_adapter(self.request)
+        if self.feed_item.liked_by.filter(id=self.request_user.id):
+            self.adapter.unlike_feed_item(self.feed_item)
+        else:
+            self.adapter.like_feed_item(self.feed_item)
+
+            # Email out feed item creator that their item has been liked
+            current_site = get_current_site(self.request)
+            feed_item_title = 'Comment' if hasattr(self.feed_item, 'parent') else 'Post'
+            activity_obj_id = self.feed_item.parent.id if hasattr(self.feed_item, 'parent') else self.feed_item.id
+            activity_path = reverse('nc:feed-activity-detail', kwargs={'pk': activity_obj_id})
+            activity_url = build_absolute_uri(self.request, activity_path)
+            email_settings_path = reverse('nc:user-settings-redirect')
+            email_settings_url = build_absolute_uri(self.request, email_settings_path)
+            ctx_email = {
+                'current_site': current_site,
+                'username': self.request_user.username,
+                'feed_item_title': feed_item_title,
+                'feed_item': feed_item_title.lower(),
+                'activity_url': activity_url,
+                'email_settings_url': email_settings_url,
+            }
+            self.adapter.send_mail('nc/email/feed_activity_like',
+                self.feed_item.user.email, ctx_email)
+
+        # Return original feed_item as there is no Like model
+        return self.feed_item
+
+
 class FeedRewardCreateForm(forms.Form):
     """
     Form to add new reward to given feed item from request.user.
@@ -958,11 +1043,10 @@ class FeedRewardCreateForm(forms.Form):
     Pass in tx hash of successful reward and stream activity id of the feed
     item request.user rewarded.
     """
-    # TODO: Add in default account to receive rewards for each user!! This needs
-    # to be in the activity feed data
     tx_hash = forms.CharField(max_length=64)
     activity_id = forms.CharField(max_length=36)
     feed_type = forms.ChoiceField(choices=[
+        (settings.STREAM_USER_FEED, settings.STREAM_USER_FEED.title()),
         (settings.STREAM_TIMELINE_FEED, settings.STREAM_TIMELINE_FEED.title()),
         (settings.STREAM_ACTIVITY_FEED, settings.STREAM_ACTIVITY_FEED.title())
     ])
@@ -989,7 +1073,7 @@ class FeedRewardCreateForm(forms.Form):
         feed_type = self.cleaned_data.get("feed_type")
 
         # Get the feed item being rewarded
-        if feed_type == settings.STREAM_TIMELINE_FEED:
+        if feed_type == settings.STREAM_TIMELINE_FEED or feed_type == settings.STREAM_USER_FEED:
             self.model_cls = Activity
         elif feed_type == settings.STREAM_ACTIVITY_FEED:
             self.model_cls = Comment

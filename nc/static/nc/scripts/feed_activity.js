@@ -71,6 +71,58 @@
     }
   });
 
+  // Attach the event listener for like/unlike button
+  $('.btn-like').on('click', function() {
+    let button = this;
+
+    // Build the JSON data to be submitted
+    var formData = {
+      'activity_id': this.dataset.activity_id,
+      'feed_type': this.dataset.feed_type,
+    };
+
+    // Submit it to Nucleo's create account endpoint
+    // TODO: IMPLEMENT A LISTENER FOR SUCCESSFUL ADDITION TO FEED IF NOT
+    // ALREADY LISTENING
+    $.post(STREAM_FEED_LIKE_ACTION, formData)
+    .then(function(result) {
+      // Toggle like button color and like count
+      button.classList.toggle('text-danger');
+      button.classList.toggle('text-dark');
+
+      // Get the current count, increment it by
+      let countSmall = $(button).find("small")[0],
+          countDelta = (button.classList.contains('text-danger') ? 1 : -1),
+          count = parseInt(button.dataset.likes_count) + countDelta,
+          countContent = ( count > 0 ? String(count) : "" );
+      button.dataset.likes_count = count;
+      countSmall.textContent = countContent;
+
+      // Update the likes link in footer of activity detail
+      if (button.dataset.child) {
+        var likesA = $(button.dataset.child)[0],
+            countSpan = $(button.dataset.child).find(".count")[0],
+            pluralSpan = $(button.dataset.child).find(".plural")[0];
+
+        countSpan.textContent = countContent;
+        if (count == 0) {
+          likesA.classList.add('d-none');
+        } else if (count == 1) {
+          likesA.classList.remove('d-none');
+          pluralSpan.classList.add('d-none');
+        } else {
+          likesA.classList.remove('d-none');
+          pluralSpan.classList.remove('d-none');
+        }
+      }
+    })
+    .catch(function(error) {
+      // Fail response gives form.errors. Make sure to show in error form
+      console.error('Something went wrong with Nucleo call', error);
+    });
+  });
+
+
   /** Parse activity record and format appropriately for activity list **/
   function parseActivity(record) {
     // Returns DOM element for insertion into activityList before MORE button
@@ -89,9 +141,9 @@
     //        <div><small>Tx #: <a href="https://horizon-testnet.stellar.org/transactions/bfaf2287695c651747e635ca7e03698ba44611ed9a6b919bd1db9727a0b6dfda" class="text-info" title="Stellar Transaction Hash" target="_blank">bfaf221...0b6dfda</a></small></div>
     //       </a>
     //       <div class="d-flex flex-row justify-content-start mt-2">
-    //        <div class="pr-4"><button class="btn btn-link text-danger p-0" data-activity_id="a8ad2b80-ca6c-11e8-8080-8001503994dc"><span data-feather="heart"></span><small class="pl-1">2</small></button></div>
-    //        <div class="pr-4"><button class="btn btn-link text-dark p-0" data-activity_id="a8ad2b80-ca6c-11e8-8080-8001503994dc" data-toggle="modal" data-target="#rewardActivityModal"><span data-feather="award"></span><small class="pl-1">100</small></button></div>
-    //        <div class="pr-4"><a href="" class="btn btn-link text-dark p-0"><span data-feather="message-circle"></span><small class="pl-1">7</small></button></div>
+    //        <div class="pr-4"><button class="btn btn-link btn-like text-danger p-0" data-activity_id="a8ad2b80-ca6c-11e8-8080-8001503994dc" data-likes_count="2"><span data-feather="heart"></span><small class="pl-1">2</small></button></div>
+    //        <div class="pr-4"><button class="btn btn-link btn-reward text-dark p-0" data-activity_id="a8ad2b80-ca6c-11e8-8080-8001503994dc" data-rewards_total="2" data-toggle="modal" data-target="#rewardActivityModal"><span data-feather="award"></span><small class="pl-1">100</small></button></div>
+    //        <div class="pr-4"><a href="" class="btn btn-link btn-comment text-dark p-0" data-activity_id="a8ad2b80-ca6c-11e8-8080-8001503994dc" data-comments_count="2"><span data-feather="message-circle"></span><small class="pl-1">7</small></button></div>
     //       </div>
     //     </div>
     //   </div>
@@ -101,7 +153,6 @@
     // Build the full DOM li list item object
     var li = document.createElement("li");
     li.setAttribute("class", "list-group-item d-flex justify-content-between p-4");
-    li.setAttribute("data-id", record.id);
 
     var contentDiv = document.createElement("div");
     contentDiv.setAttribute("class", "d-flex align-content-start");
@@ -247,13 +298,47 @@
     actionLikeIconSpan.setAttribute("data-feather", "heart");
     actionLikeContainer.setAttribute("class", "pr-4");
     if (record.liked_by && record.liked_by.includes(CURRENT_USER_ID)) {
-      actionLikeButton.setAttribute("class", "btn btn-link text-danger p-0");
+      actionLikeButton.setAttribute("class", "btn btn-link btn-like text-danger p-0");
     } else {
-      actionLikeButton.setAttribute("class", "btn btn-link text-dark p-0");
+      actionLikeButton.setAttribute("class", "btn btn-link btn-like text-dark p-0");
     }
     // Set the data attributes needed for POST to like/unlike endpoint
     actionLikeButton.setAttribute("data-id", record.foreign_id);
     actionLikeButton.setAttribute("data-activity_id", record.id);
+    actionLikeButton.setAttribute("data-feed_type", STREAM_FEED_TYPE);
+    actionLikeButton.setAttribute("data-likes_count", (record.likes_count ? record.likes_count : 0));
+    // Attach the event listener for like/unlike
+    actionLikeButton.addEventListener('click', function() {
+      let button = this;
+
+      // Build the JSON data to be submitted
+      var formData = {
+        'activity_id': this.dataset.activity_id,
+        'feed_type': this.dataset.feed_type,
+      };
+
+      // Submit it to Nucleo's create account endpoint
+      // TODO: IMPLEMENT A LISTENER FOR SUCCESSFUL ADDITION TO FEED IF NOT
+      // ALREADY LISTENING
+      $.post(STREAM_FEED_LIKE_ACTION, formData)
+      .then(function(result) {
+        // Toggle like button color and like count
+        button.classList.toggle('text-danger');
+        button.classList.toggle('text-dark');
+
+        // Get the current count, increment it by
+        let countSmall = $(button).find("small")[0],
+            countDelta = (button.classList.contains('text-danger') ? 1 : -1),
+            count = parseInt(button.dataset.likes_count) + countDelta,
+            countContent = ( count > 0 ? String(count) : "" );
+        button.dataset.likes_count = count;
+        countSmall.textContent = countContent;
+      })
+      .catch(function(error) {
+        // Fail response gives form.errors. Make sure to show in error form
+        console.error('Something went wrong with Nucleo call', error);
+      });
+    });
     // Append rest of DOM to button and container
     actionLikeSmall.setAttribute("class", "pl-1");
     actionLikeButton.append(actionLikeIconSpan);
@@ -264,13 +349,14 @@
     actionRewardIconSpan.setAttribute("data-feather", "award");
     actionRewardContainer.setAttribute("class", "pr-4");
     if (record.rewarded_by && record.rewarded_by.includes(CURRENT_USER_ID)) {
-      actionRewardButton.setAttribute("class", "btn btn-link text-warning p-0");
+      actionRewardButton.setAttribute("class", "btn btn-link btn-reward text-warning p-0");
     } else {
-      actionRewardButton.setAttribute("class", "btn btn-link text-dark p-0");
+      actionRewardButton.setAttribute("class", "btn btn-link btn-reward text-dark p-0");
     }
     // Set the data attributes needed for button click modal open to reward
     actionRewardButton.setAttribute("data-id", record.foreign_id);
     actionRewardButton.setAttribute("data-activity_id", record.id);
+    actionRewardButton.setAttribute("data-rewards_total", (record.rewards_total ? record.rewards_total : 0));
     actionRewardButton.setAttribute("data-toggle", "modal");
     actionRewardButton.setAttribute("data-target", "#rewardActivityModal");
     // Append rest of DOM to button and container
@@ -283,21 +369,26 @@
     actionCommentIconSpan.setAttribute("data-feather", "message-circle");
     actionCommentContainer.setAttribute("class", "pr-4");
     if (record.commented_by && record.commented_by.includes(CURRENT_USER_ID)) {
-      actionCommentButton.setAttribute("class", "btn btn-link text-primary p-0");
+      actionCommentButton.setAttribute("class", "btn btn-link btn-comment text-primary p-0");
     } else {
-      actionCommentButton.setAttribute("class", "btn btn-link text-dark p-0");
+      actionCommentButton.setAttribute("class", "btn btn-link btn-comment text-dark p-0");
     }
     if (record.activity_url) {
       actionCommentButton.setAttribute("href", record.activity_url);
     }
+    // Set the data attributes needed for button click modal open to reward
+    actionCommentButton.setAttribute("data-id", record.foreign_id);
+    actionCommentButton.setAttribute("data-activity_id", record.id);
+    actionCommentButton.setAttribute("data-comments_count", (record.comments_count ? record.comments_count : 0));
+    // Append rest of DOM to button and container
     actionCommentSmall.setAttribute("class", "pl-1");
     actionCommentButton.append(actionCommentIconSpan);
     actionCommentSmall.append(actionCommentText);
     actionCommentButton.append(actionCommentSmall);
     actionCommentContainer.append(actionCommentButton);
 
-    // TODO: actionsDiv.appendChild(actionLikeContainer);
-    // TODO: actionsDiv.appendChild(actionRewardContainer);
+    actionsDiv.appendChild(actionLikeContainer);
+    // actionsDiv.appendChild(actionRewardContainer);
     if (record.verb != 'comment') {
       actionsDiv.appendChild(actionCommentContainer);
     }
@@ -310,7 +401,7 @@
 
     // Feather icon container for activity icon type
     var featherIconSpan = document.createElement("span");
-    li.append(featherIconSpan);
+    // li.append(featherIconSpan);
 
     // Determine feather icon and fill in description details
     // Four activity verb types
@@ -488,5 +579,5 @@
       console.error('Something went wrong with Nucleo call', error);
       // TODO: displayError(modalHeader, error.message);
     });
-  })
+  });
 })();

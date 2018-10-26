@@ -18,6 +18,8 @@ urlpatterns = [
     url(r'^profile/(?P<slug>[\w.@+-]+)/portfolio/data/$', views.UserPortfolioDataListView.as_view(), name='user-portfolio-data-list'),
 
     # Associated Stellar account
+    url(r'^account/$', views.AccountRedirectView.as_view(), name='account-redirect'),
+    url(r'^profile/(?P<slug>[\w.@+-]+)/accounts/$', views.AccountDetailView.as_view(), name='account-detail'),
     url(r'^account/create/$', views.AccountCreateView.as_view(), name='account-create'),
     url(r'^account/fund/request/create/$', views.AccountFundRequestCreateView.as_view(), name='account-fund-request-create'),
     url(r'^account/(?P<slug>[\w.@+-]+)/update/$', views.AccountUpdateView.as_view(), name='account-update'),
@@ -47,7 +49,11 @@ urlpatterns = [
     url(r'^feed/activity/create/$', views.FeedActivityCreateView.as_view(), name='feed-activity-create'),
     url(r'^feed/post/create/$', views.FeedPostCreateView.as_view(), name='feed-post-create'),
     url(r'^feed/activity/(?P<pk>\d+)/comment/$', views.FeedCommentUpdateView.as_view(), name='feed-comment-update'),
+    url(r'^feed/like/update/$', views.FeedLikeUpdateView.as_view(), name='feed-like-update'),
     url(r'^feed/reward/create/$', views.FeedRewardCreateView.as_view(), name='feed-reward-create'),
+
+    # Dashboard
+    url(r'^dashboard/$', views.DashboardView.as_view(), name='dashboard'),
 
     # Send
     url(r'^send/$', views.SendRedirectView.as_view(), name='send-redirect'),

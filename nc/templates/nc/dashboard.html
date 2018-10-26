@@ -1,0 +1,374 @@
+{% extends "nc/base.html" %}
+{% load static %}
+{% load bootstrap %}
+{% load humanize %}
+{% load nc_extras %}
+
+{% block head %}{% endblock %}
+
+{% block nc_style %}
+<link rel="stylesheet" type="text/css" href='{% static 'nc/feed.css' %}' />
+{% endblock %}
+
+{% block title %}Dashboard | Nucleo{% endblock %}
+
+{% block main %}
+<div class="d-flex justify-content-between align-items-start">
+  <div class="w-md-75 pr-md-2 d-flex flex-column">
+    <div class="list-group mb-3">
+      <div class="list-group-item flex-column align-items-start">
+        <a href="{% url 'nc:user-redirect' %}" class="list-group-item list-group-item-action d-flex w-100 justify-content-between p-0 border-0">
+          <div class="d-flex flex-row align-items-center my-2">
+            <div class="mr-2">
+              <img class="img-object-fit-cover img-thumbnail flex-auto" style="height: 70px; width: 70px;"{% if profile and profile.pic %} src="{{ profile.pic.url }}"{% else %} src="{% static 'nc/images/profile.png' %}"{% endif %} alt="">
+            </div>
+            <div class="d-flex flex-column align-items-start justify-content-start">
+              <strong>{{ request.user.get_full_name }}</strong>
+              <small class="text-secondary">@{{ request.user.username }}</small>
+              <small>
+                {% for a in request.user.assets_trusting.all %}
+                <img class="img-object-fit-cover rounded-circle" {% if a.name %}title="{{ a.name }}"{% else %}title="{{ a.code }} (Issuer: {{ a.issuer_address|truncatechars:8 }}{{ a.issuer_address|slice:'-5:' }})"{% endif %} style="height: 15px; width: 15px;"{% if a.pic %} src="{{ a.pic.url }}"{% elif a.toml_pic %} src="{{ a.toml_pic }}"{% else %} src="{% static 'nc/images/asset.png' %}"{% endif %} alt="">
+                {% endfor %}
+              </small>
+            </div>
+          </div>
+        </a>
+        <div class="d-flex flex-wrap w-100 justify-content-between align-items-end">
+          <div class="d-flex flex-column">
+            <div class="btn-group pr-2 my-1">
+              {% if profile.portfolio.rank %}
+              <a href="{% url 'nc:leaderboard-redirect' %}" title="Leaderboard Ranking (1d)" class="btn btn-sm btn-warning">
+                <span data-feather="award"></span>
+                {{ profile.portfolio.rank }}
+              </a>
+              {% endif %}
+              <button type="button" {% if portfolio_latest_created %}title="Your Portfolio Value ({{ portfolio_latest_created|naturaltime }})"{% else %}title="Your Portfolio Value"{% endif %} class="btn btn-sm btn-dark">
+                ${{ portfolio_latest_usd_value|floatformat:2|intcomma }}
+              </button>
+              {% with profile.portfolio|get_attribute:performance_attr as performance %}
+              {% if performance != None %}
+              <button type="button" title="Your Portfolio Performance (1d)" {% if performance > 0 %}class="btn btn-sm btn-success"{% elif performance < 0 %}class="btn btn-sm btn-danger"{% else %}class="btn btn-sm btn-secondary"{% endif %}>
+                {% if performance > 0 %}+{% endif %}{{ performance|percentage }}
+              </button>
+              {% endif %}
+              {% endwith %}
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card-footer border">
+        <form method="POST" id="postForm" action="{% url 'nc:feed-post-create' %}" data-success="">
+          {% csrf_token %}
+          <div class="input-group">
+            <input class="form-control form-control-lg" type="text" name="message" maxlength="255" placeholder="What crypto's on your mind?" required>
+            <div class="input-group-append">
+              <button type="submit" class="btn btn-sm btn-primary ladda-button" data-style="expand-left" data-size="xs"><span class="ladda-label"><span data-feather="edit-2"></span></span></button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Reward activity modal -->
+    <div class="modal fade" id="rewardActivityModal" tabindex="-1" role="dialog" aria-labelledby="rewardActivityModalTitle" aria-hidden="true">
+      <form method="POST" id="rewardActivityModalForm">
+        {% csrf_token %}
+        <div class="modal-dialog" role="document">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="rewardActivityModalTitle">Reward With Lumens</h5>
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+            <div class="modal-body">
+              <h5 id="rewardActivityModalHeader" class="pt-1 mb-3 modal-body-header"></h5>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+              <button type="submit" class="btn btn-primary ladda-button" data-style="expand-left" data-size="s" {% if request.user.accounts.count == 0 %}disabled{% endif %}><span class="ladda-label">Send Reward</span></button>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <div class="card card-feed">
+      <div class="card-header p-0 m-0 d-block d-md-none">
+        <ul class="nav nav-pills nav-justified">
+          <li class="nav-item">
+            <a title="Feed" class="nav-link btn-outline-info rounded-0 rounded-left active" href="{% url 'nc:feed-redirect' %}">
+              <div class="d-flex flex-column justify-content-center align-items-center">
+                <span data-feather="activity"></span>
+                <small>Activity</small>
+              </div>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a title="Leaderboard" class="nav-link btn-outline-warning rounded-0" href="{% url 'nc:leaderboard-redirect' %}">
+              <div class="d-flex flex-column justify-content-center align-items-center">
+                <span data-feather="award"></span>
+                <small>Leaderboard</small>
+              </div>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a title="Trade" class="nav-link btn-outline-success rounded-0 rounded-right" href="{% url 'nc:trade-redirect' %}">
+              <div class="d-flex flex-column justify-content-center align-items-center">
+                <span data-feather="trending-up"></span>
+                <small>Prices</small>
+              </div>
+            </a>
+          </li>
+        </ul>
+      </div>
+      <div class="card-header border-0 d-flex flex-wrap justify-content-between align-items-center">
+        <div class="mb-1 d-flex flex-column justify-content-between align-items-start">
+          <h5>Top Activity From Your Friends</h5>
+          <span class="text-secondary">Stay on top of what's happening in crypto</span>
+        </div>
+      </div>
+      <div class="card-body p-0">
+        <ul id="activityList" class="list-group">
+        </ul>
+      </div>
+      <div class="card-footer border-0 d-flex justify-content-start align-items-center">
+        <button id="moreButton" type="button" class="btn btn-sm btn-link more-feed p-0" data-parent="#activityList" data-has_more="true" data-id_lt="">More</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="w-md-25 d-none d-md-block pl-md-2">
+    <div class="d-flex flex-column">
+      <div class="card card-feed mb-3">
+        <div class="card-header border-0 d-flex flex-wrap justify-content-between align-items-center">
+          <div class="mb-1 d-flex flex-column justify-content-between align-items-start">
+            <h5>Today's Top Assets On Stellar</h5>
+            <span class="text-secondary">Choose an asset to trade on Stellar's built-in DEX</span>
+          </div>
+          <div class="mb-1 d-flex flex-column justify-content-between align-items-start">
+            <div class="btn-group my-1" role="group">
+              <a {% if asset_top_display == 'activityScore' %}href="{% url 'nc:dashboard' %}?display={{ asset_top_display }}&counter_code=USD&order_by={{ asset_top_order_by }}"{% else %}href="{% url 'nc:dashboard' %}?display={{ asset_top_display|slice:"0:-3" }}USD&counter_code=USD&order_by={{ asset_top_order_by }}"{% endif %} {% if asset_top_counter_code == 'USD' %}class="btn btn-sm btn-light active"{% else %}class="btn btn-sm btn-light"{% endif %}>USD</a>
+              <a {% if asset_top_display == 'activityScore' %}href="{% url 'nc:dashboard' %}?display={{ asset_top_display }}&counter_code=XLM&order_by={{ asset_top_order_by }}"{% else %}href="{% url 'nc:dashboard' %}?display={{ asset_top_display|slice:"0:-3" }}XLM&counter_code=XLM&order_by={{ asset_top_order_by }}"{% endif %} {% if asset_top_counter_code == 'XLM' %}class="btn btn-sm btn-light active"{% else %}class="btn btn-sm btn-light"{% endif %}>XLM</a>
+            </div>
+            <div class="btn-group my-1" role="group">
+              <a {% if asset_top_display == 'activityScore' %}{% if asset_top_order_by == 'asc' %}href="{% url 'nc:dashboard' %}?display=activityScore&counter_code={{ asset_top_counter_code }}&order_by=desc"{% else %}href="{% url 'nc:dashboard' %}?display=activityScore&counter_code={{ asset_top_counter_code }}&order_by=asc"{% endif %} class="btn btn-sm btn-primary active"{% else %}href="{% url 'nc:dashboard' %}?display=activityScore&counter_code={{ asset_top_counter_code }}&order_by={{ asset_top_order_by }}" class="btn btn-sm btn-primary"{% endif %}>
+                {% if asset_top_display == 'activityScore' %}
+                <span {% if asset_top_order_by == 'desc' %}data-feather="chevrons-up"{% else %}data-feather="chevrons-down"{% endif %}></span>
+                {% endif %}
+                Activity
+              </a>
+              <a {% if asset_top_display == 'price_USD' or asset_top_display == 'price_XLM' %}{% if order_by == 'asc' %}href="{% url 'nc:dashboard' %}?display=price_{{ asset_top_display|slice:"-3:" }}&counter_code={{ asset_top_counter_code }}&order_by=desc"{% else %}href="{% url 'nc:dashboard' %}?display=price_{{ asset_top_display|slice:"-3:" }}&counter_code={{ asset_top_counter_code }}&order_by=asc"{% endif %} class="btn btn-sm btn-primary active"{% elif asset_top_display != 'activityScore' %}href="{% url 'nc:dashboard' %}?display=price_{{ asset_top_display|slice:"-3:" }}&counter_code={{ asset_top_counter_code }}&order_by={{ asset_top_order_by }}" class="btn btn-sm btn-primary"{% else %}href="{% url 'nc:dashboard' %}?display=price_{{ asset_top_counter_code }}&counter_code={{ asset_top_counter_code }}&order_by={{ asset_top_order_by }}" class="btn btn-sm btn-primary"{% endif %}>
+                {% if asset_top_display == 'price_USD' or asset_top_display == 'price_XLM' %}
+                <span {% if asset_top_order_by == 'desc' %}data-feather="chevrons-up"{% else %}data-feather="chevrons-down"{% endif %}></span>
+                {% endif %}
+                Price
+              </a>
+              <a {% if asset_top_display == 'change24h_USD' or asset_top_display == 'change24h_XLM' %}{% if asset_top_order_by == 'asc' %}href="{% url 'nc:dashboard' %}?display=change24h_{{ display|slice:"-3:" }}&counter_code={{ asset_top_counter_code }}&order_by=desc"{% else %}href="{% url 'nc:dashboard' %}?display=change24h_{{ asset_top_display|slice:"-3:" }}&counter_code={{ asset_top_counter_code }}&order_by=asc"{% endif %} class="btn btn-sm btn-primary active"{% elif asset_top_display != 'activityScore' %}href="{% url 'nc:dashboard' %}?display=change24h_{{ asset_top_display|slice:"-3:" }}&counter_code={{ asset_top_counter_code }}&order_by={{ asset_top_order_by }}" class="btn btn-sm btn-primary"{% else %}href="{% url 'nc:dashboard' %}?display=change24h_{{ asset_top_counter_code }}&counter_code={{ asset_top_counter_code }}&order_by={{ asset_top_order_by }}" class="btn btn-sm btn-primary"{% endif %}>
+                {% if asset_top_display == 'change24h_USD' or asset_top_display == 'change24h_XLM' %}
+                <span {% if asset_top_order_by == 'desc' %}data-feather="chevrons-up"{% else %}data-feather="chevrons-down"{% endif %}></span>{% endif %}
+                Change 24h
+              </a>
+            </div>
+          </div>
+        </div>
+        <div class="card-body card-leaderboard p-0">
+          <ol class="list-group">
+            {% for a in asset_top_page_obj %}
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+              <a href="{% url 'nc:asset-detail' a.asset_id %}" class="list-group-item list-group-item-action p-0 border-0">
+                <div class="d-inline-flex justify-content-start align-items-center">
+                  <img class="img-object-fit-cover img-thumbnail rounded-circle flex-auto" style="height: 55px; width: 55px;"{% if a.pic %} src="{{ a.pic.url }}"{% elif a.toml_pic %} src="{{ a.toml_pic }}"{% else %} src="{% static 'nc/images/asset.png' %}"{% endif %} alt="">
+                  <div class="ml-2 d-flex flex-column align-items-start justify-content-center">
+                    <strong>{{ a.code }}</strong>
+                    <small class="text-muted">{% if a.domain %}{{ a.domain }}{% endif %}</small>
+                  </div>
+                </div>
+              </a>
+              <div class="ml-2 asset-ticker">
+                {% with a|get_attribute:'price_USD' as display_val %}
+                {% with a|get_attribute:'change24h_USD' as performance %}
+                <button type="button" {% if performance and display_val != None %}{% if performance > 0 %}class="d-none btn btn-sm btn-success btn-asset btn-price_USD"{% elif performance < 0 %}class="d-none btn btn-sm btn-danger btn-asset btn-price_USD"{% endif %}{% else %}class="d-none btn btn-sm btn-secondary btn-asset btn-price_USD"{% endif %}>
+                  {% if display_val != None %}${{ display_val|intcomma }}{% else %}-{% endif %}
+                </button>
+                <button type="button" {% if performance %}{% if performance > 0 %}class="d-none btn btn-sm btn-success btn-asset btn-change24h_USD"{% elif performance < 0 %}class="d-none btn btn-sm btn-danger btn-asset btn-change24h_USD"{% endif %}{% else %}class="d-none btn btn-sm btn-secondary btn-asset btn-change24h_USD"{% endif %}>
+                  {% if performance != None %}{% if performance > 0 %}+{% endif %}{{ performance|floatformat:2|intcomma }}%{% else %}-{% endif %}
+                </button>
+                {% endwith %}
+                {% endwith %}
+
+                {% with a|get_attribute:'price_XLM' as display_val %}
+                {% with a|get_attribute:'change24h_XLM' as performance %}
+                <button type="button" {% if performance and display_val != None %}{% if performance > 0 %}class="d-none btn btn-sm btn-success btn-asset btn-price_XLM"{% elif performance < 0 %}class="d-none btn btn-sm btn-danger btn-asset btn-price_XLM"{% endif %}{% else %}class="d-none btn btn-sm btn-secondary btn-asset btn-price_XLM"{% endif %}>
+                  {% if display_val != None %}{{ display_val|intcomma }} XLM{% else %}-{% endif %}
+                </button>
+                <button type="button" {% if performance %}{% if performance > 0 %}class="d-none btn btn-sm btn-success btn-asset btn-change24h_XLM"{% elif performance < 0 %}class="d-none btn btn-sm btn-danger btn-asset btn-change24h_XLM"{% endif %}{% else %}class="d-none btn btn-sm btn-secondary btn-topassets btn-change24h_XLM"{% endif %}>
+                  {% if performance != None %}{% if performance > 0 %}+{% endif %}{{ performance|floatformat:2|intcomma }}%{% else %}-{% endif %}
+                </button>
+                {% endwith %}
+                {% endwith %}
+              </div>
+            </div>
+            {% endfor %}
+          </ol>
+        </div>
+        <div class="card-footer border-0">
+          <a href="{% url 'nc:trade-redirect' %}" class="btn btn-sm btn-primary">View More Assets</a>
+        </div>
+      </div>
+
+      <div class="card card-feed mb-3">
+        <div class="card-header border-0 d-flex flex-wrap justify-content-between align-items-center">
+          <div class="mb-1 d-flex flex-column justify-content-between align-items-start">
+            <h5>Today's Top Performers On Nucleo</h5>
+            <span class="text-secondary">Follow the best portfolios Nucleo has to offer</span>
+          </div>
+        </div>
+        <div class="card-body card-leaderboard p-0">
+          <ol class="list-group">
+            {% for u in leaderboard_page_obj %}
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+              <a href="{% url 'nc:user-detail' u.username %}" class="list-group-item list-group-item-action p-0 border-0">
+                <div class="d-inline-flex justify-content-start align-items-center">
+                  <img class="img-object-fit-cover img-thumbnail rounded flex-auto" style="height: 55px; width: 55px;"{% if u.profile.pic %} src="{{ u.profile.pic.url }}"{% else %} src="{% static 'nc/images/profile.png' %}"{% endif %} alt="">
+                  <div class="ml-2 d-flex flex-column align-items-start justify-content-center">
+                    <strong>{{ u.get_full_name }}</strong>
+                    <small class="text-muted">@{{ u.username }}</small>
+                    <small>
+                      {% for a in u.assets_trusting.all %}
+                      <img class="img-object-fit-cover rounded-circle" {% if a.name %}title="{{ a.name }}"{% else %}title="{{ a.code }} (Issuer: {{ a.issuer_address|truncatechars:8 }}{{ a.issuer_address|slice:'-5:' }})"{% endif %} style="height: 15px; width: 15px;"{% if a.pic %} src="{{ a.pic.url }}"{% elif a.toml_pic %} src="{{ a.toml_pic }}"{% else %} src="{% static 'nc/images/asset.png' %}"{% endif %} alt="">
+                      {% endfor %}
+                    </small>
+                  </div>
+                </div>
+              </a>
+              <div class="ml-2">
+                {% with u.profile.portfolio|get_attribute:'usd_value' as display_val %}
+                {% with u.profile.portfolio|get_attribute:performance_attr as performance %}
+                {% if performance != None %}
+                <button type="button" title="Portfolio Value" {% if performance and display_val >= 0 %}{% if performance > 0 %}class="d-none btn btn-sm btn-success btn-leaderboard btn-usd_value"{% elif performance < 0 %}class="d-none btn btn-sm btn-danger btn-leaderboard btn-usd_value"{% endif %}{% else %}class="d-none btn btn-sm btn-secondary btn-leaderboard btn-usd_value"{% endif %}>
+                  {% if u != request.user and not u.is_following and u.profile.is_private %}
+                  <span data-feather="lock"></span>
+                  {% else %}
+                  {% if display_val >= 0 %}${{ display_val|floatformat:2|intcomma }}{% else %}-{% endif %}
+                  {% endif %}
+                </button>
+                <button type="button" title="Performance" {% if performance > 0 %}class="d-none btn btn-sm btn-success btn-leaderboard btn-{{ performance_attr }}"{% elif performance < 0 %}class="d-none btn btn-sm btn-danger btn-leaderboard btn-{{ performance_attr }}"{% else %}class="d-none btn btn-sm btn-secondary btn-leaderboard btn-{{ performance_attr }}"{% endif %}>
+                  {% if performance > 0 %}+{% endif %}{{ performance|percentage }}
+                </button>
+                {% endif %}
+                {% endwith %}
+                {% endwith %}
+              </div>
+            </div>
+            {% endfor %}
+          </ol>
+        </div>
+        <div class="card-footer border-0">
+          <a href="{% url 'nc:leaderboard-redirect' %}" class="btn btn-sm btn-primary">View More Leaders</a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Change Trust Modal -->
+<div class="modal fade" id="changeTrustModal" tabindex="-1" role="dialog" aria-labelledby="changeTrustModalTitle" aria-hidden="true">
+  <form method="POST" id="changeTrustModalForm" data-asset_code="" data-asset_issuer="">
+    {% csrf_token %}
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="changeTrustModalTitle">Change Trust For <span class="modal-asset-code"></span></h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <h5 id="changeTrustModalBodyHeader" class="pt-1 mb-3 modal-body-header">Please enter your secret key to toggle trust</h5>
+          <div class="input-group">
+            <div class="input-group">
+              <input id="changeTrustModalSecretKey" type="password" name="secret_key" class="form-control" placeholder="Secret Key (example: SBUVRVHRRGNBFYY...)" aria-label="Secret Key">
+              <div class="input-group-append">
+                <button id="changeTrustModalLedger" class="btn btn-outline-secondary ledger-button" type="button" name="ledger" data-public_key="" data-parent="#changeTrustModalSecretKey" data-alert_ref="#changeTrustModalBodyHeader" data-alert_before="false" data-submit_name="Submit">
+                  <img src="{% static 'nc/images/ledger.png' %}" alt="" width="auto" height="16">
+                </button>
+              </div>
+            </div>
+            <div class="text-muted mt-2">
+              <small id="changeTrustModalRemovePrompt" style="display: none;">
+                The Stellar account associated with this secret key currently trusts <span class="modal-asset-code"></span>.
+                By clicking Change Trust, you will <span class="font-weight-bold">remove trust</span> for <span class="modal-asset-code"></span>.
+              </small>
+              <small id="changeTrustModalAddPrompt" style="display: none;">
+                The Stellar account associated with this secret key currently does not trust <span class="modal-asset-code"></span>.
+                By clicking Change Trust, you will <span class="font-weight-bold">add trust</span> for <span class="modal-asset-code"></span>.
+              </small>
+            </div>
+          </div>
+          <p class="mt-3">
+            By clicking Change Trust, a transaction with <a href="https://www.stellar.org/developers/guides/concepts/list-of-operations.html#change-trust" class="text-info" target="_blank">Change Trust</a> operation will be added to the Stellar Network.
+          </p>
+          <div class="text-danger mt-4">
+            <strong>Security Notes</strong>
+            <ul>
+              <li>We do NOT store your secret key. Your secret key is never sent to our servers.</li>
+              <li>Nucleo uses your secret key to sign off on this modification to the Stellar ledger.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+          <button type="submit" class="btn btn-primary ladda-button" data-style="expand-left" data-size="s"><span class="ladda-label">Change Trust</span></button>
+        </div>
+      </div>
+    </div>
+  </form>
+</div>
+
+<!-- Activity Tx Hash Form -->
+<form method="POST" id="activityForm" class="d-none" action="{% url 'nc:feed-activity-create' %}">
+  {% csrf_token %}
+  <input name="success_url" type="hidden" value="{{ request.get_full_path }}">
+  {{ activity_form }}
+</form>
+{% endblock %}
+
+
+{% block nc_script %}
+<script>
+  const CURRENT_USER_ID = {% if request.user.is_authenticated %}{{ request.user.id }}{% else %}null{% endif %};
+</script>
+<script>
+  var CURRENT_DISPLAY = {
+      'leaderboard': "{{ leaderboard_display }}",
+      'asset': {% if asset_top_display == 'activityScore' %}"price_{{ asset_top_counter_code }}"{% else %}"{{ asset_top_display }}"{% endif %},
+  };
+  const ALLOWED_DISPLAYS = {
+    'leaderboard': [
+      {% for d in leaderboard_allowed_displays %}
+      "{{ d }}",
+      {% endfor %}
+    ],
+    'asset': [
+      "price_{{ asset_top_counter_code }}",
+      "change24h_{{ asset_top_counter_code }}"
+    ]
+  };
+</script>
+<script src="{% static 'nc/scripts/ticker.js' %}"></script>
+<script src="{% static 'nc/scripts/dashboard.js' %}"></script>
+<script>
+  const STREAM_API_KEY = "{{ stream_api_key }}",
+        STREAM_FEED_TYPE = "{{ stream_feed_type }}",
+        STREAM_FEED_ID = "{{ stream_feed_id }}",
+        STREAM_FEED_TOKEN = "{{ stream_feed_token }}",
+        STREAM_FEED_LISTEN = true,
+        STREAM_FEED_LIKE_ACTION = "{% url 'nc:feed-like-update' %}",
+        STREAM_FEED_REWARD_ACTION = "{% url 'nc:feed-reward-create' %}",
+        STREAM_FEED_LIMIT = 25;
+</script>
+<script src="{% static 'getstream/js/getstream.min.js' %}"></script>
+<script src="{% static 'nc/scripts/feed_activity.js' %}"></script>
+{% endblock %}
