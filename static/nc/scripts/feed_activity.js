@@ -5,13 +5,15 @@
   Initialize Stream client and get current user timeline.
   */
   $(document).ready(function() {
-    streamClient = stream.connect(STREAM_API_KEY, null);
-    streamFeed = streamClient.feed(STREAM_FEED_TYPE, STREAM_FEED_ID, STREAM_FEED_TOKEN);
+    if (STREAM_FEED_TYPE && STREAM_FEED_ID && STREAM_FEED_TOKEN) {
+      streamClient = stream.connect(STREAM_API_KEY, null);
+      streamFeed = streamClient.feed(STREAM_FEED_TYPE, STREAM_FEED_ID, STREAM_FEED_TOKEN);
 
-    // Load the first batch of activities by clicking the "more" button
-    let moreButton = $('#moreButton');
-    if (moreButton) {
-      moreButton.click();
+      // Load the first batch of activities by clicking the "more" button
+      let moreButton = $('#moreButton');
+      if (moreButton) {
+        moreButton.click();
+      }
     }
   });
 
@@ -222,7 +224,8 @@
     var descriptionSpan = document.createElement("span"),
         memoDiv = document.createElement("div"),
         memoContent = ((record.memo || record.message) ? (record.memo ? record.memo : record.message) : ""),
-        memoText = document.createTextNode(memoContent),
+        memoContentText = document.createTextNode(memoContent),
+        memoContentSpan = document.createElement("span"),
         timeSinceDiv = document.createElement("div"),
         timeSinceSmall = document.createElement("small"),
         timeSince = moment(record.time + "Z").fromNow(), // NOTE: Stellar horizon created_at attribute stored in stream record.time implicitly assumes UTC so add Z here
@@ -256,7 +259,16 @@
     } else {
       memoDiv.setAttribute("class", "h5 pt-2 text-dark");
     }
-    memoDiv.appendChild(memoText);
+
+    // append memo, then linkify span itself
+    memoContentSpan.appendChild(memoContentText);
+    $(memoContentSpan).linkify({
+      defaultProtocol: 'https',
+      format: {
+        url: function (value) { return value.length > 20 ? value.slice(0, 20) + '…' : value }
+      }
+    });
+    memoDiv.appendChild(memoContentSpan);
 
     // Timesince div in description container
     timeSinceSmall.setAttribute("class", "text-muted");

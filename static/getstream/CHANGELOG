@@ -2,6 +2,34 @@
  Change history
 ================
 
+3.22.0
+======
+:release-date: 2018-10-17
+:by: Jelte Fennema
+
+* Add support for reading reactions by ID
+* Make collections an alias for the storage API, to make naming consistent
+
+
+3.21.0
+======
+:release-date: 2018-09-17
+:by: Jelte Fennema
+
+* Support for a new set of frontend API's
+
+
+3.20.0
+======
+:release-date: 2018-07-17
+:by: Jelte Fennema
+
+A beta release was released by accident on the "latest" npm tag. This release
+is effectively undoes that by creating a newer version.
+
+* Support for partial activity update
+* Support creating a client without a secret on the nodejs again.
+
 3.19.0
 ======
 :release-date: 2018-07-17

@@ -60,7 +60,7 @@
         <form method="POST" id="postForm" action="{% url 'nc:feed-post-create' %}" data-success="">
           {% csrf_token %}
           <div class="input-group">
-            <input class="form-control form-control-lg" type="text" name="message" maxlength="255" placeholder="What crypto's on your mind?" required>
+            <input class="form-control form-control-md" type="text" name="message" maxlength="255" placeholder="What crypto's on your mind?" required>
             <div class="input-group-append">
               <button type="submit" class="btn btn-sm btn-primary ladda-button" data-style="expand-left" data-size="xs"><span class="ladda-label"><span data-feather="edit-2"></span></span></button>
             </div>
@@ -100,7 +100,6 @@
             <a title="Feed" class="nav-link btn-outline-info rounded-0 rounded-left active" href="{% url 'nc:feed-redirect' %}">
               <div class="d-flex flex-column justify-content-center align-items-center">
                 <span data-feather="activity"></span>
-                <small>Activity</small>
               </div>
             </a>
           </li>
@@ -108,7 +107,6 @@
             <a title="Leaderboard" class="nav-link btn-outline-warning rounded-0" href="{% url 'nc:leaderboard-redirect' %}">
               <div class="d-flex flex-column justify-content-center align-items-center">
                 <span data-feather="award"></span>
-                <small>Leaderboard</small>
               </div>
             </a>
           </li>
@@ -116,7 +114,6 @@
             <a title="Trade" class="nav-link btn-outline-success rounded-0 rounded-right" href="{% url 'nc:trade-redirect' %}">
               <div class="d-flex flex-column justify-content-center align-items-center">
                 <span data-feather="trending-up"></span>
-                <small>Prices</small>
               </div>
             </a>
           </li>

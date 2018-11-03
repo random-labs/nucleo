@@ -67,7 +67,10 @@
         <small class="d-none d-md-inline-block">Payments</small>
       </a>
       <div class="dropdown">
-        <button type="button" class="btn btn-dark navbar-btn dropdown-toggle dropdown-toggle-split" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        <button type="button" class="btn btn-dark navbar-btn" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          {% with request.user.profile as profile %}
+          <img class="rounded img-object-fit-cover bg-white" style="height: 30px; width: 30px;"{% if profile and profile.pic %} src="{{ profile.pic.url }}"{% else %} src="{% static 'nc/images/profile.png' %}"{% endif %} alt="">
+          {% endwith %}
           <span class="sr-only">Toggle Dropdown</span>
         </button>
         <div class="dropdown-menu dropdown-menu-right" style="right: 0; left: auto; margin-right: 13px;">
@@ -93,7 +96,7 @@
             Profile
           </a>
           <div class="dropdown-divider"></div>
-          <a class="dropdown-item" href="">
+          <a class="dropdown-item" data-toggle="modal" href="#depositFundsModal">
             <span data-feather="dollar-sign"></span>
             Funding
           </a>
@@ -101,9 +104,18 @@
             <span data-feather="send"></span>
             Payments
           </a>
-          <a class="dropdown-item" href="">
-            <span data-feather="bell"></span>
-            Alerts
+          <a class="dropdown-item" href="{% url 'nc:user-alert-redirect' %}">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <span data-feather="bell"></span>
+                Alerts
+              </div>
+              {% with request.user.follower_requests.count as follower_request_count %}
+              {% if follower_request_count > 0 %}
+              <span class="badge small badge-danger">{{ follower_request_count }}</span>
+              {% endif %}
+              {% endwith %}
+            </div>
           </a>
           <div class="dropdown-divider"></div>
           <a class="dropdown-item" href="{% url 'nc:user-settings-redirect' %}">
@@ -117,10 +129,11 @@
       </div>
       {% else %}
       <div class="dropdown">
-        <button type="button" class="btn btn-dark navbar-btn dropdown-toggle dropdown-toggle-split" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        <button type="button" class="btn btn-dark navbar-btn" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          <span data-feather="menu"></span>
           <span class="sr-only">Toggle Dropdown</span>
         </button>
-        <div class="dropdown-menu dropdown-menu-right">
+        <div class="dropdown-menu dropdown-menu-right" style="right: 0; left: auto; margin-right: 13px;">
           <a class="dropdown-item" href="{% url 'nc:leaderboard-redirect' %}">
             <span data-feather="award"></span>
             Leaderboard
@@ -188,7 +201,7 @@
                 <div class="form-group">
                   <label for="depositFundsModalAssetSelect">Asset type</label>
                   <select class="custom-select" id="depositFundsModalAssetSelect" name="asset" required="">
-                    <option value="">Choose...</option>
+                    <option value="">Choose asset...</option>
                     {% for a in deposit_assets %}
                     <option value="{{ a.asset_id }}" data-code="{{ a.code }}" data-issuer="{{ a.issuer_address }}">{{ a.code }}</option>
                     {% endfor %}
@@ -218,7 +231,7 @@
                     <option value="{{ acc.public_key }}">{% if acc.name %}{{ acc.name }} {% endif %}({{ acc.public_key|truncatechars:10 }}{{ acc.public_key|slice:"-7:" }})</option>
                     {% endfor %}
                   </select>
-                  <small><a href="{% url 'nc:user-detail' request.user.username %}#accounts">Add a Stellar account</a></small>
+                  <small><a href="{% url 'nc:account-redirect' %}">Add a Stellar account</a></small>
                   <div class="invalid-feedback">
                     Please select a valid account.
                   </div>
@@ -235,7 +248,7 @@
               </div>
               <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                <button type="submit" class="btn btn-primary ladda-button" data-style="expand-left" data-size="s" {% if request.user.accounts.count == 0 %}disabled{% endif %}><span class="ladda-label">Get External Address</span></button>
+                <button type="submit" class="btn btn-primary ladda-button" data-style="expand-left" data-size="s" {% if request.user.accounts.count == 0 %}disabled{% endif %}><span class="ladda-label">Get Deposit Address</span></button>
               </div>
             </div>
           </div>

@@ -1,5 +1,5 @@
 /**
- * @license  Highcharts JS v6.1.1 (2018-06-27)
+ * @license  Highcharts JS v6.2.0 (2018-10-17)
  *
  * Indicator series type for Highstock
  *
@@ -11,6 +11,10 @@
 (function (factory) {
 	if (typeof module === 'object' && module.exports) {
 		module.exports = factory;
+	} else if (typeof define === 'function' && define.amd) {
+		define(function () {
+			return factory;
+		});
 	} else {
 		factory(Highcharts);
 	}
@@ -45,7 +49,7 @@
 		     * Pivot points indicator. This series requires the `linkedTo` option to be
 		     * set and should be loaded after `stock/indicators/indicators.js` file.
 		     *
-		     * @extends {plotOptions.sma}
+		     * @extends plotOptions.sma
 		     * @product highstock
 		     * @sample {highstock} stock/indicators/pivot-points
 		     *                     Pivot points
@@ -157,6 +161,7 @@
 
 		            return path;
 		        },
+		        // TODO: Rewrite this logic to use multiple datalabels
 		        drawDataLabels: function () {
 		            var indicator = this,
 		                pointMapping = indicator.pointArrayMap,
@@ -192,7 +197,11 @@
 		                                    point.dataLabel;
 		                            }
 
-		                            point.dataLabel = currentLabel =
+		                            if (!point.dataLabels) {
+		                                point.dataLabels = [];
+		                            }
+		                            point.dataLabels[0] = point.dataLabel =
+		                                currentLabel =
 		                                currentLabel && currentLabel.element ?
 		                                    currentLabel :
 		                                    null;

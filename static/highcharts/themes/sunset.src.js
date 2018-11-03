@@ -1,5 +1,5 @@
 /**
- * @license Highcharts JS v6.1.1 (2018-06-27)
+ * @license Highcharts JS v6.2.0 (2018-10-17)
  *
  * (c) 2009-2017 Highsoft AS
  *
@@ -9,6 +9,10 @@
 (function (factory) {
 	if (typeof module === 'object' && module.exports) {
 		module.exports = factory;
+	} else if (typeof define === 'function' && define.amd) {
+		define(function () {
+			return factory;
+		});
 	} else {
 		factory(Highcharts);
 	}

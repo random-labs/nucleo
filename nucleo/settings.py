@@ -270,6 +270,7 @@ BOWER_INSTALLED_APPS = (
     'bignumber.js',
     'getstream',
     'lodash',
+    'linkifyjs',
 )
 
 # Webpack

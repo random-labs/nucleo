@@ -59,6 +59,7 @@ extend(defaultOptions.lang, {
  * ](code.highcharts.com/modules/drilldown.js).
  *
  * @type {Object}
+ * @product highcharts highstock highmaps
  * @optionparent drilldown
  */
 defaultOptions.drilldown = {
@@ -153,12 +154,12 @@ defaultOptions.drilldown = {
      * <dt>easing</dt>
      *
      * <dd>A string reference to an easing function set on the `Math` object.
-     * See [the easing demo](http://jsfiddle.net/gh/get/library/pure/highcharts/highcharts/tree/master/samples/highcharts/plotoptions/series-
+     * See [the easing demo](https://jsfiddle.net/gh/get/library/pure/highcharts/highcharts/tree/master/samples/highcharts/plotoptions/series-
      * animation-easing/).</dd>
      *
      * </dl>
      *
-     * @type {Boolean|Object}
+     * @type {Boolean|AnimationOptions}
      * @since 3.0.8
      * @product highcharts highmaps
      */
@@ -236,6 +237,7 @@ defaultOptions.drilldown = {
 
             /**
              * Horizontal alignment.
+             * @validvalue ["left", "center", "right"]
              * @type {String}
              */
             align: 'right',

@@ -1,5 +1,5 @@
 /**
- * (c) 2010-2017 Torstein Honsi
+ * (c) 2010-2018 Torstein Honsi
  *
  * License: www.highcharts.com/license
  */
@@ -43,7 +43,7 @@ if (!H.ColorAxis) {
          * classes.
          *
          * For supported color formats, see the
-         * [docs article about colors](http://www.highcharts.com/docs/chart-design-and-style/colors).
+         * [docs article about colors](https://www.highcharts.com/docs/chart-design-and-style/colors).
          *
          * A scalar color axis is represented by a gradient. The colors either
          * range between the [minColor](#colorAxis.minColor) and the
@@ -64,7 +64,7 @@ if (!H.ColorAxis) {
          * See [the Axis object](/class-reference/Highcharts.Axis) for
          * programmatic access to the axis.
          *
-         * @extends {xAxis}
+         * @extends xAxis
          * @excluding allowDecimals,alternateGridColor,breaks,categories,
          *            crosshair,dateTimeLabelFormats,lineWidth,linkedTo,maxZoom,
          *            minRange,minTickInterval,offset,opposite,plotBands,
@@ -293,7 +293,7 @@ if (!H.ColorAxis) {
                  * Animation for the marker as it moves between values. Set to
                  * `false` to disable animation. Defaults to `{ duration: 50 }`.
                  *
-                 * @type {Object|Boolean}
+                 * @type {AnimationOptions|Boolean}
                  * @product highcharts highmaps
                  */
                 animation: {
@@ -934,7 +934,6 @@ if (!H.ColorAxis) {
                                     }
                                 });
                             });
-
                             chart.legend.colorizeItem(this, vis);
                         }
                     }, dataClass));

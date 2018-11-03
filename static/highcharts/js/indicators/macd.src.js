@@ -1,5 +1,5 @@
 /**
- * @license  Highcharts JS v6.1.1 (2018-06-27)
+ * @license  Highcharts JS v6.2.0 (2018-10-17)
  *
  * Indicator series type for Highstock
  *
@@ -11,6 +11,10 @@
 (function (factory) {
 	if (typeof module === 'object' && module.exports) {
 		module.exports = factory;
+	} else if (typeof define === 'function' && define.amd) {
+		define(function () {
+			return factory;
+		});
 	} else {
 		factory(Highcharts);
 	}
@@ -59,7 +63,7 @@
 		     * Exponential moving average indicator (EMA). This series requires the
 		     * `linkedTo` option to be set.
 		     *
-		     * @extends {plotOptions.sma}
+		     * @extends plotOptions.sma
 		     * @product highstock
 		     * @sample {highstock} stock/indicators/ema
 		     *                        Exponential moving average indicator
@@ -193,7 +197,7 @@
 		     * Moving Average Convergence Divergence (MACD). This series requires
 		     * `linkedTo` option to be set.
 		     *
-		     * @extends {plotOptions.sma}
+		     * @extends plotOptions.sma
 		     * @product highstock
 		     * @sample {highstock} stock/indicators/macd MACD indicator
 		     * @since 6.0.0
@@ -374,8 +378,8 @@
 		        destroy: function () {
 		            // this.graph is null due to removing two times the same SVG element
 		            this.graph = null;
-		            this.graphmacd = this.graphmacd.destroy();
-		            this.graphsignal = this.graphsignal.destroy();
+		            this.graphmacd = this.graphmacd && this.graphmacd.destroy();
+		            this.graphsignal = this.graphsignal && this.graphsignal.destroy();
 
 		            SMA.prototype.destroy.apply(this, arguments);
 		        },
@@ -483,7 +487,7 @@
 		                longEMA,
 		                i;
 
-		            if (series.xData.length < params.longPeriod) {
+		            if (series.xData.length < params.longPeriod + params.signalPeriod) {
 		                return false;
 		            }
 

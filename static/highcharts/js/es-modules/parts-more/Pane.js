@@ -1,5 +1,5 @@
 /**
- * (c) 2010-2017 Torstein Honsi
+ * (c) 2010-2018 Torstein Honsi
  *
  * License: www.highcharts.com/license
  */
@@ -127,6 +127,7 @@ extend(Pane.prototype, {
      * The pane serves as a container for axes and backgrounds for circular
      * gauges and polar charts.
      * @since 2.3.0
+     * @product highcharts
      * @optionparent pane
      */
     defaultOptions: {
@@ -203,7 +204,7 @@ extend(Pane.prototype, {
          */
 
         /**
-         * Tha shape of the pane background. When `solid`, the background
+         * The shape of the pane background. When `solid`, the background
          * is circular. When `arc`, the background extends only from the min
          * to the max of the value axis.
          *

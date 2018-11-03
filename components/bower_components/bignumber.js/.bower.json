@@ -1,45 +1,15 @@
 {
   "name": "bignumber.js",
-  "main": "bignumber.js",
-  "version": "7.2.1",
   "homepage": "https://github.com/MikeMcl/bignumber.js",
-  "authors": [
-    "Michael Mclaughlin <M8ch88l@gmail.com>"
-  ],
-  "description": "A library for arbitrary-precision decimal and non-decimal arithmetic",
-  "moduleType": [
-    "amd",
-    "globals",
-    "node"
-  ],
-  "keywords": [
-    "arbitrary",
-    "precision",
-    "arithmetic",
-    "big",
-    "number",
-    "decimal",
-    "float",
-    "biginteger",
-    "bigdecimal",
-    "bignumber",
-    "bigint",
-    "bignum"
-  ],
-  "license": "MIT",
-  "ignore": [
-    ".*",
-    "*.json",
-    "test"
-  ],
-  "_release": "7.2.1",
+  "version": "8.0.1",
+  "_release": "8.0.1",
   "_resolution": {
     "type": "version",
-    "tag": "v7.2.1",
-    "commit": "38ba62a15c0088ca401f1e3bbd5bdb7acf220fe9"
+    "tag": "v8.0.1",
+    "commit": "01bfc34da4cb6bee4b5e4e5d9927e5b6c4672ff0"
   },
   "_source": "https://github.com/MikeMcl/bignumber.js.git",
-  "_target": "^7.2.1",
+  "_target": "^8.0.1",
   "_originalSource": "bignumber.js",
   "_direct": true
 }

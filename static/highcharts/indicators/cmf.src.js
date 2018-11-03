@@ -1,5 +1,5 @@
 /**
- * @license  Highcharts JS v6.1.1 (2018-06-27)
+ * @license  Highcharts JS v6.2.0 (2018-10-17)
  *
  * (c) 2010-2017 Highsoft AS
  * Author: Sebastian Domas
@@ -10,6 +10,10 @@
 (function (factory) {
 	if (typeof module === 'object' && module.exports) {
 		module.exports = factory;
+	} else if (typeof define === 'function' && define.amd) {
+		define(function () {
+			return factory;
+		});
 	} else {
 		factory(Highcharts);
 	}
@@ -30,7 +34,7 @@
 		   * Chaikin Money Flow indicator (cmf).
 		   *
 		   * @type {Object}
-		   * @extends {plotOptions.sma}
+		   * @extends plotOptions.sma
 		   * @product highstock
 		   * @sample {highstock} stock/indicators/cmf/
 		   *                     Chaikin Money Flow indicator

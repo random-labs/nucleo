@@ -1,17 +1,17 @@
 {
   "name": "highcharts",
-  "version": "6.1.1",
+  "version": "6.2.0",
   "main": "highcharts.js",
   "license": "https://www.highcharts.com/license",
   "homepage": "https://github.com/highcharts/highcharts-dist",
-  "_release": "6.1.1",
+  "_release": "6.2.0",
   "_resolution": {
     "type": "version",
-    "tag": "v6.1.1",
-    "commit": "7d9ed876c43be71554b61559078e01d45dd2d743"
+    "tag": "v6.2.0",
+    "commit": "db56080cdd25d3115066146b2b9f1c1e87f2dbb1"
   },
   "_source": "https://github.com/highcharts/highcharts-dist.git",
-  "_target": "^6.1.1",
+  "_target": "^6.2.0",
   "_originalSource": "highcharts",
   "_direct": true
 }

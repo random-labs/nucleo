@@ -1,7 +1,7 @@
 /**
  * Streamgraph module
  *
- * (c) 2010-2017 Torstein Honsi
+ * (c) 2010-2018 Torstein Honsi
  *
  * License: www.highcharts.com/license
  */
@@ -15,7 +15,7 @@ var seriesType = H.seriesType;
  * A streamgraph is a type of stacked area graph which is displaced around a
  * central axis, resulting in a flowing, organic shape.
  *
- * @extends {plotOptions.areaspline}
+ * @extends plotOptions.areaspline
  * @product highcharts highstock
  * @sample {highcharts|highstock} highcharts/demo/streamgraph/
  *         Streamgraph
@@ -86,8 +86,8 @@ seriesType('streamgraph', 'areaspline', {
  *     ]
  *  ```
  *
- * 3.  An array of objects with named values. The objects are point
- * configuration objects as seen below. If the total number of data
+ * 3.  An array of objects with named values. The following snippet shows only a
+ * few settings, see the complete options set below. If the total number of data
  * points exceeds the series' [turboThreshold](#series.area.turboThreshold),
  * this option is not available.
  *

@@ -19,9 +19,9 @@
 
 {% block main %}
   <div class="d-flex flex-column justify-content-center align-items-center py-0 mb-3">
-    <button type="button" class="btn btn-lg btn-secondary m-3" data-toggle="modal" data-target="#addStellarModal">Add Existing Stellar Account</button>
+    <button type="button" class="btn btn-lg btn-secondary m-3" data-toggle="modal" data-target="#addStellarModal">Import Stellar Account</button>
     <span class="font-weight-bold">OR</span>
-    <button type="button" class="btn btn-lg btn-primary m-3" data-toggle="modal" data-target="#createStellarModal">Create New Stellar Account</button>
+    <button type="button" class="btn btn-lg btn-primary m-3" data-toggle="modal" data-target="#createStellarModal">Create Stellar Account</button>
   </div>
   <div class="d-flex flex-column justify-content-center align-items-center py-4 my-4">
     <a href="{% url 'account-signup-following-update' %}" class="btn btn-sm btn-light">Skip To Follow Friends</a>
@@ -34,7 +34,7 @@
       <div class="modal-dialog" role="document">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title" id="addStellarModalTitle">Add Stellar Account</h5>
+            <h5 class="modal-title" id="addStellarModalTitle">Import Stellar Account</h5>
             <button type="button" class="close" data-dismiss="modal" aria-label="Close">
               <span aria-hidden="true">&times;</span>
             </button>
@@ -62,7 +62,7 @@
           <div class="modal-footer">
             <input type="hidden" name="signed_user" value="{{ signed_user }}">
             <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-            <button type="submit" class="btn btn-primary ladda-button" data-style="expand-left" data-size="s"><span class="ladda-label">Add Account</span></button>
+            <button type="submit" class="btn btn-primary ladda-button" data-style="expand-left" data-size="s"><span class="ladda-label">Import Account</span></button>
           </div>
         </div>
       </div>

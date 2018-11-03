@@ -357,6 +357,23 @@ class UserSettingsUpdateView(LoginRequiredMixin, mixins.PrefetchedSingleObjectMi
         return self.model.objects.filter(id=self.request.user.id)
 
 
+class UserAlertsRedirectView(LoginRequiredMixin, generic.RedirectView):
+    query_string = True
+    pattern_name = 'nc:user-alert-list'
+
+    def get_redirect_url(self, *args, **kwargs):
+        kwargs.update({ 'slug': self.request.user.username })
+        return super(UserAlertsRedirectView, self).get_redirect_url(*args, **kwargs)
+
+
+class UserAlertsListView(LoginRequiredMixin, mixins.IndexContextMixin,
+    mixins.ViewTypeContextMixin, mixins.UserFollowerRequestsContextMixin,
+    generic.TemplateView):
+    slug_field = 'username'
+    template_name = 'nc/profile_alert_list.html'
+    view_type = 'profile'
+
+
 class UserFollowUpdateView(LoginRequiredMixin, mixins.PrefetchedSingleObjectMixin,
     mixins.IndexContextMixin, mixins.ViewTypeContextMixin,
     mixins.DepositAssetsContextMixin, generic.UpdateView):

@@ -7,9 +7,11 @@ urlpatterns = [
     # User profile
     url(r'^profile/$', views.UserRedirectView.as_view(), name='user-redirect'),
     url(r'^profile/settings/$', views.UserSettingsRedirectView.as_view(), name='user-settings-redirect'),
+    url(r'^profile/alerts/$', views.UserAlertsRedirectView.as_view(), name='user-alert-redirect'),
     url(r'^profile/(?P<slug>[\w.@+-]+)/$', views.UserDetailView.as_view(), name='user-detail'),
     url(r'^profile/(?P<slug>[\w.@+-]+)/update/$', views.UserUpdateView.as_view(), name='user-update'),
     url(r'^profile/(?P<slug>[\w.@+-]+)/settings/update/$', views.UserSettingsUpdateView.as_view(), name='user-settings-update'),
+    url(r'^profile/(?P<slug>[\w.@+-]+)/alerts/$', views.UserAlertsListView.as_view(), name='user-alert-list'),
     url(r'^profile/(?P<slug>[\w.@+-]+)/follow/$', views.UserFollowUpdateView.as_view(), name='user-follow'),
     url(r'^profile/(?P<slug>[\w.@+-]+)/follow/request/update/$', views.UserFollowRequestUpdateView.as_view(), name='user-follow-request-update'),
     url(r'^profile/(?P<slug>[\w.@+-]+)/follow/request/delete/$', views.UserFollowRequestDeleteView.as_view(), name='user-follow-request-delete'),

@@ -17,15 +17,15 @@
     "package.json"
   ],
   "homepage": "https://github.com/moment/moment-timezone",
-  "version": "0.5.17",
-  "_release": "0.5.17",
+  "version": "0.5.23",
+  "_release": "0.5.23",
   "_resolution": {
     "type": "version",
-    "tag": "0.5.17",
-    "commit": "75f9e6e7bf95e363b97a4d4376325272bcf5946b"
+    "tag": "0.5.23",
+    "commit": "d0bcdcad01acece5df6988603e8cec146d78bd12"
   },
   "_source": "https://github.com/moment/moment-timezone.git",
-  "_target": "^0.5.17",
+  "_target": "^0.5.23",
   "_originalSource": "moment-timezone",
   "_direct": true
 }

@@ -1,5 +1,5 @@
 /**
- * @license  Highcharts JS v6.1.1 (2018-06-27)
+ * @license  Highcharts JS v6.2.0 (2018-10-17)
  *
  * Indicator series type for Highstock
  *
@@ -11,6 +11,10 @@
 (function (factory) {
 	if (typeof module === 'object' && module.exports) {
 		module.exports = factory;
+	} else if (typeof define === 'function' && define.amd) {
+		define(function () {
+			return factory;
+		});
 	} else {
 		factory(Highcharts);
 	}
@@ -39,7 +43,7 @@
 		    /**
 		     * Momentum. This series requires `linkedTo` option to be set.
 		     *
-		     * @extends {plotOptions.sma}
+		     * @extends plotOptions.sma
 		     * @product highstock
 		     * @sample {highstock} stock/indicators/momentum Momentum indicator
 		     * @since 6.0.0
@@ -82,7 +86,7 @@
 		            ];
 
 
-		            // Calculate value one-by-one for each perdio in visible data
+		            // Calculate value one-by-one for each period in visible data
 		            for (i = (period + 1); i < yValLen; i++) {
 		                MMPoint = populateAverage(points, xVal, yVal, i, period, index);
 		                MM.push(MMPoint);
