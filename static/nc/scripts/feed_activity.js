@@ -265,7 +265,7 @@
     $(memoContentSpan).linkify({
       defaultProtocol: 'https',
       format: {
-        url: function (value) { return value.length > 20 ? value.slice(0, 20) + '…' : value }
+        url: function (value) { return value.length > 10 ? value.slice(0, 10) + '…' : value }
       }
     });
     memoDiv.appendChild(memoContentSpan);

@@ -49,7 +49,7 @@
         {% elif activity.verb == 'trust' %}
         <span><a href="{{ activity.actor_href }}" class="text-dark font-weight-bold">@{{ activity.actor_username }}</a> trusted <a href="{{ activity.object_href }}" class="text-dark font-weight-bold">{% if activity.object_type == 'native' %}XLM{% else %}{{ activity.object_code }}{% endif %}</a></span>
         {% endif %}
-        <div class="h3 pt-2">{% if activity.message %}{{ activity.message|urlizetrunc:20 }}{% elif activity.memo %}{{ activity.memo|urlizetrunc:20 }}{% endif %}</div>
+        <div class="h3 pt-2">{% if activity.message %}{{ activity.message|urlizetrunc:10 }}{% elif activity.memo %}{{ activity.memo|urlizetrunc:10 }}{% endif %}</div>
         <div><small class="text-muted">{{ activity.time|naturaltime }}</small></div>
         {% if activity.tx_hash %}
         <div><small>Tx #: <a href="{{ activity.tx_href }}" class="text-info" title="Stellar Transaction Hash" target="_blank">{{ activity.tx_hash|truncatechars:10 }}{{ activity.tx_hash|slice:"-7:" }}</a></small></div>
