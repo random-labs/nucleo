@@ -71,13 +71,6 @@
     </div>
   </form>
 </div>
-
-<!-- Activity Tx Hash Form -->
-<form method="POST" id="activityForm" class="d-none" action="{% url 'nc:feed-activity-create' %}">
-  {% csrf_token %}
-  <input name="success_url" type="hidden" value="{{ request.get_full_path }}">
-  {{ activity_form }}
-</form>
 {% endif %}
 
 <div class="card">

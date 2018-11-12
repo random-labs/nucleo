@@ -112,18 +112,12 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-          <button type="submit" class="btn btn-primary ladda-button" data-style="expand-left" data-size="s"><span class="ladda-label">Submit</span></button>
+          <button type="submit" class="btn btn-primary ladda-button" data-style="expand-left" data-size="s"><span class="ladda-label">Change Trust</span></button>
         </div>
       </div>
     </div>
   </form>
 </div>
-
-<!-- Activity Tx Hash Form -->
-<form method="POST" id="activityForm" class="d-none" action="{% url 'nc:feed-activity-create' %}">
-  {% csrf_token %}
-  {{ activity_form }}
-</form>
 {% endblock %}
 
 

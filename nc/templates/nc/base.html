@@ -128,7 +128,7 @@
       <div class="dropdown">
         <a href="#" title="Funding" class="btn btn-dark navbar-btn px-2" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
           <span data-feather="dollar-sign"></span>
-          <small class="d-none d-md-inline-block">Funding</small>
+          <small class="d-none d-md-inline-block pl-1">Funding</small>
           <span class="sr-only">Toggle Dropdown</span>
         </a>
         <div class="dropdown-menu dropdown-menu-right" style="right: 0; left: auto; margin-right: 13px;">
@@ -148,7 +148,7 @@
       </div>
       <a href="{% url 'nc:send-redirect' %}" title="Payments" class="btn btn-dark navbar-btn px-2">
         <span data-feather="send"></span>
-        <small class="d-none d-md-inline-block">Payments</small>
+        <small class="d-none d-md-inline-block pl-1">Payments</small>
       </a>
       <div class="dropdown d-none d-md-inline pl-2">
         <button type="button" class="btn btn-dark navbar-btn dropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
@@ -268,6 +268,13 @@
       </main>
 
       {% if request.user.is_authenticated %}
+      <!-- Activity Tx Hash Form -->
+      <form method="POST" id="activityForm" class="d-none" action="{% url 'nc:feed-activity-create' %}">
+        {% csrf_token %}
+        <input name="success_url" type="hidden" value="{{ request.get_full_path }}">
+        {{ activity_form }}
+      </form>
+
       <!-- Deposit funds modal -->
       <div class="modal fade" id="depositFundsModal" tabindex="-1" role="dialog" aria-labelledby="depositFundsModalTitle" aria-hidden="true">
         <form method="POST" id="depositFundsModalForm">
@@ -333,6 +340,89 @@
               <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
                 <button type="submit" class="btn btn-primary ladda-button" data-style="expand-left" data-size="s" {% if request.user.accounts.count == 0 %}disabled{% endif %}><span class="ladda-label">Get Deposit Address</span></button>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <!-- Send Payment modal -->
+      <div class="modal fade" id="sendPaymentModal" tabindex="-1" role="dialog" aria-labelledby="sendPaymentModalTitle" aria-hidden="true">
+        <form method="POST" id="sendPaymentForm">
+          {% csrf_token %}
+          <div class="modal-dialog" role="document">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="sendPaymentModalTitle">Send Payment</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                  <span aria-hidden="true">&times;</span>
+                </button>
+              </div>
+              <div class="modal-body">
+                <div class="form-group">
+                  <h5 id="depositFundsModalHeader" class="pt-1 mb-3 modal-body-header">Search for friends to add as recipients</h5>
+                  <label class="control-label" for="sendToInput">To:</label>
+                  <div class="input-group">
+                    <input id="sendToInput" type="text" class="form-control" placeholder="Name, @username, public key" aria-label="Account Search" aria-describedby="basic-addon-to" autocomplete="off" autocorrect="false" spellcheck="false" type="search">
+                  </div>
+                </div>
+                <div class="w-100">
+                  <div id="sendToDropdown" class="d-none">
+                    <div id="sendToAccountPagination"></div>
+                    <small class="dropdown-item">Powered by <a class="text-muted" href="https://www.algolia.com/">Algolia</a></small>
+                    <h6 class="dropdown-header">Accounts</h6>
+                    <ul class="list-group" id="sendToAccountHits"></ul>
+                  </div>
+                </div>
+              </div>
+              <div class="modal-footer"></div>
+              <div class="modal-body d-none">
+                <hr>
+                <div class="form-group">
+                  <label class="control-label" for="sendFromInput">Send From</label>
+                  <div class="input-group">
+                    <div class="input-group-prepend">
+                      <span class="input-group-text" id="basic-addon-from">From:</span>
+                    </div>
+                    <input id="sendFromInput" type="password" name="secret_key" class="form-control" placeholder="Your Account Secret Key (e.x. SBUVRVHRRGNBFYY...)" aria-label="Secret Key" aria-describedby="basic-addon-from">
+                    <div class="input-group-append">
+                      <button id="sendFromLedger" class="btn btn-outline-secondary ledger-button" type="button" name="ledger" data-public_key="" data-parent="#sendFromInput" data-alert_ref="label[for='sendFromInput']" data-alert_before="true" data-submit_name="Send">
+                        <img src="{% static 'nc/images/ledger.png' %}" alt="" width="auto" height="16">
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="asset">Asset</label>
+                  <select class="custom-select" id="assetSelect" name="asset" required="">
+                    <option value="">Choose...</option>
+                  </select>
+                  <div class="invalid-feedback">
+                    Please select a valid asset.
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="amount">Amount</label>
+                  <div class="input-group">
+                    <input type="number" name="amount" class="form-control" id="amount" min="0" max="" step="0.0000001" required>
+                    <div class="input-group-append">
+                      <span id="amountInputAssetCode" class="input-group-text"></span>
+                    </div>
+                  </div>
+                  <small class="text-muted">Available asset balance: <span id="amountInputAvailable"></span></small>
+                </div>
+                <hr>
+                <div id="memoContentFormGroup" class="form-group">
+                  <label for="memoContent" class="d-flex justify-content-between align-items-end">
+                    <span>Memo</span>
+                    <small class="text-muted"><span id="memoByteDisplay"></span>/28</small>
+                  </label>
+                  <textarea class="form-control memo-content-text" id="memoContent" name="memo-content" rows="3" placeholder="What's it for?" aria-label="Memo" maxlength="28" required="" data-byte_display="#memoByteDisplay"></textarea>
+                </div>
+              </div>
+              <div class="modal-footer d-none">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button type="submit" class="btn btn-primary ladda-button" data-style="expand-left" data-size="s"><span class="ladda-label">Preview Payment</span></button>
               </div>
             </div>
           </div>
@@ -418,7 +508,7 @@ $('.btn-clipboard[data-toggle="tooltip"]').on('click', function(e) {
     <div class="ml-2 d-flex flex-column align-items-start justify-content-center">
       <strong>{{{ _highlightResult.code.value }}}</strong>
       <span class="text-secondary">{{{ _highlightResult.domain.value }}}</span>
-      <small class="text-muted" style="font-size: 0.6em">Issuer: {{{ _highlightResult.issuer_address.value }}}</small>
+      <small class="text-muted" style="font-size: 0.6em">Issuer: {{ issuer_address_truncated }}</small>
     </div>
   </a>
 </script>
@@ -428,11 +518,29 @@ $('.btn-clipboard[data-toggle="tooltip"]').on('click', function(e) {
     <div class="ml-2 d-flex flex-column align-items-start justify-content-center">
       <strong>{{{ _highlightResult.name.value }}}</strong>
       <span class="text-secondary">@{{{ _highlightResult.username.value }}}</span>
-      <small class="text-muted" style="font-size: 0.6em">{{{ _highlightResult.public_key.value }}}</small>
+      <small class="text-muted" style="font-size: 0.6em">{{ public_key_truncated }}</small>
     </div>
   </a>
 </script>
 <script type="text/html" id="searchEmptyTemplate">
+  <div class="list-group-item d-flex list-group-item-action justify-content-start align-items-center border-left-0 border-right-0 rounded-0">
+    No results
+  </div>
+</script>
+<script type="text/html" id="sendToAccountHitTemplate">
+  <a data-public_key="{{{ public_key }}}" class="dropdown-item d-flex flex-wrap justify-content-start align-items-center border-0 py-3" onclick="console.log(this.dataset.public_key)">
+    <div class="position-relative">
+      <img class="img-object-fit-cover img-thumbnail" style="height: 60px; width: 60px;" src="{{{ pic_url }}}" alt="">
+      <img class="img-object-fit-cover img-thumbnail position-absolute" style="height: 40px; width: 40px; top: -15px; left: -15px;" src="{{{ user_pic_url }}}" alt="">
+    </div>
+    <div class="ml-2 d-flex flex-column align-items-start justify-content-center">
+      <strong>{{{ _highlightResult.name.value }}}</strong>
+      <span class="text-secondary">{{{ _highlightResult.user_full_name.value }}} (@{{{ _highlightResult.username.value }}})</span>
+      <small class="text-muted" style="font-size: 0.6em">{{ public_key_truncated }}</small>
+    </div>
+  </a>
+</script>
+<script type="text/html" id="sendToEmptyTemplate">
   <div class="list-group-item d-flex list-group-item-action justify-content-start align-items-center border-left-0 border-right-0 rounded-0">
     No results
   </div>
@@ -448,6 +556,8 @@ $('.btn-clipboard[data-toggle="tooltip"]').on('click', function(e) {
         };
 </script>
 <script src="{% static 'nc/scripts/deposit.js' %}"></script>
+<script src="{% static 'nc/scripts/payment.js' %}"></script>
+<script src="{% static 'nc/scripts/memo.js' %}"></script>
 {% block nc_script %}
 {% endblock %}
 {% endblock %}

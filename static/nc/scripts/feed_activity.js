@@ -570,10 +570,6 @@
       formData[obj.name] = obj.value;
     });
 
-    // Start Ladda animation for UI loading
-    let laddaButton = Ladda.create($(this).find(":submit")[0]);
-    laddaButton.start();
-
     // Submit it to Nucleo's create account endpoint
     // TODO: IMPLEMENT A LISTENER FOR SUCCESSFUL ADDITION TO FEED IF NOT ALREADY LISTENING: Use
     $.post(this.action, formData)
@@ -586,8 +582,7 @@
       // Fail response gives form.errors. Make sure to show in error form
       // TODO: let modalHeader = $("#addStellarModalForm").find('.modal-body-header')[0];
 
-      // Stop the button loading animation then display the error
-      Ladda.stopAll();
+      // Display the error
       console.error('Something went wrong with Nucleo call', error);
       // TODO: displayError(modalHeader, error.message);
     });

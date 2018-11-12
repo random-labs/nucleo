@@ -35,8 +35,9 @@ class ProfileIndex(SecuredAlgoliaIndex):
 
 
 class AccountIndex(SecuredAlgoliaIndex):
-    fields = ('public_key', 'username', 'name', 'pic_url', 'href', 'user_full_name',
-        'user_pic_url', 'profile_is_private', 'viewable_by_if_private')
+    fields = ('public_key', 'public_key_truncated', 'username', 'name', 'pic_url',
+        'href', 'user_full_name', 'user_pic_url', 'profile_is_private',
+        'viewable_by_if_private')
     settings = {
         'searchableAttributes': ['public_key', 'username', 'user_full_name', 'name'],
         'attributesForFaceting': ['profile_is_private', 'viewable_by_if_private'],
@@ -58,7 +59,8 @@ class AccountIndex(SecuredAlgoliaIndex):
 
 
 class AssetIndex(SecuredAlgoliaIndex):
-    fields = ('code', 'issuer_address', 'issuer_handle', 'domain', 'pic_url', 'href')
+    fields = ('code', 'issuer_address', 'issuer_address_truncated', 'issuer_handle',
+        'domain', 'pic_url', 'href')
     settings = {
         'searchableAttributes': ['code', 'domain', 'issuer_handle', 'issuer_address'],
         'highlightPreTag': '<mark>',

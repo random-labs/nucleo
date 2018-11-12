@@ -115,13 +115,15 @@ class ProfileEmailSettingsUpdateForm(forms.ModelForm):
     class Meta:
         model = Profile
         fields = [ 'allow_payment_email', 'allow_token_issuance_email', 'allow_trust_email',
-            'allow_trade_email', 'allow_follower_email' ]
+            'allow_trade_email', 'allow_follower_email', 'allow_post_email', 'allow_comment_email' ]
         labels = {
             'allow_payment_email': _('Payments'),
             'allow_token_issuance_email': _('New tokens'),
             'allow_trust_email': _('Asset trusts'),
             'allow_trade_email': _('Trades'),
             'allow_follower_email': _('Follow requests'),
+            'allow_post_email': _('Timeline posts'),
+            'allow_comment_email': _('Comments on posts'),
         }
         help_texts = {
             'allow_payment_email': _('Receive email notification when someone sends you a payment.'),
@@ -129,6 +131,8 @@ class ProfileEmailSettingsUpdateForm(forms.ModelForm):
             'allow_trust_email': _("Receive email notification when someone trusts a token you've issued."),
             'allow_trade_email': _('Receive email notification when someone you follow buys/sells an asset.'),
             'allow_follower_email': _('Receive email notification when someone requests to follow you.'),
+            'allow_post_email': _('Receive email notification when someone you follow posts to their timeline.'),
+            'allow_comment_email': _('Receive email notification when someone comments on your timeline posts.'),
         }
 
 

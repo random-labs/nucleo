@@ -422,12 +422,6 @@
     </div>
   </form>
 </div>
-
-<!-- Activity Tx Hash Form -->
-<form method="POST" id="activityForm" class="d-none" action="{% url 'nc:feed-activity-create' %}">
-  {% csrf_token %}
-  {{ activity_form }}
-</form>
 {% endif %}
 
 
@@ -445,7 +439,7 @@
           <div class="input-group">
             <input class="form-control form-control-md" type="text" name="message" maxlength="255" placeholder="What crypto's on your mind?" required>
             <div class="input-group-append">
-              <button type="submit" class="btn btn-sm btn-primary ladda-button" data-style="expand-left" data-size="xs"><span class="ladda-label"><span data-feather="edit-2"></span></span></button>
+              <button type="submit" class="btn btn-sm btn-primary"><span data-feather="edit-2"></span></button>
             </div>
           </div>
         </form>

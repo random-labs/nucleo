@@ -122,6 +122,12 @@ class Account(models.Model):
         # Return the response from notifier
         return ret
 
+    def public_key_truncated(self):
+        """
+        Have this method as a proxy for the search index.
+        """
+        return self.public_key[0:7] + '...' + self.public_key[-7:]
+
     def username(self):
         """
         Have this method as a proxy for the search index.
@@ -464,8 +470,8 @@ class Asset(models.Model):
     # NOTE: Since these meta fields are defined in the TOML (which Nucleo can't change
     # directly for logged in user clientside), should store them here to be safe
     name = models.CharField(max_length=255, null=True, blank=True, default=None)
-    description = models.CharField(max_length=255, null=True, blank=True, default=None)
-    conditions = models.CharField(max_length=255, null=True, blank=True, default=None)
+    description = models.TextField(null=True, blank=True, default=None)
+    conditions = models.TextField(null=True, blank=True, default=None)
     display_decimals = models.PositiveSmallIntegerField(default=7)
 
     pic = models.ImageField(
@@ -493,6 +499,12 @@ class Asset(models.Model):
 
     # Asset manager
     objects = managers.AssetManager()
+
+    def issuer_address_truncated(self):
+        """
+        Have this method as a proxy for the search index.
+        """
+        return self.issuer_address[0:7] + '...' + self.issuer_address[-7:] if self.issuer_address else ''
 
     def issuer_handle(self):
         """
